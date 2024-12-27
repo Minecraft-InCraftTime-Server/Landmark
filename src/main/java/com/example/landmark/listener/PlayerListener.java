@@ -132,15 +132,24 @@ public class PlayerListener implements Listener {
             // 计算旋转角度
             double rotation = time * rotationSpeed;
 
-            // 绘制第一个三角形
-            for (int i = 0; i < points; i += 2) {
-                double angle1 = (2 * Math.PI * i / points) + rotation;
-                double angle2 = (2 * Math.PI * ((i + 2) % points) / points) + rotation;
+            // 六芒星顶点坐标
+            double[] vertexX = new double[points];
+            double[] vertexZ = new double[points];
+            for (int i = 0; i < points; i++) {
+                double angle = (2 * Math.PI * i / points) + rotation;
+                vertexX[i] = center.getX() + Math.cos(angle) * radius;
+                vertexZ[i] = center.getZ() + Math.sin(angle) * radius;
+            }
 
-                double x1 = center.getX() + Math.cos(angle1) * radius;
-                double z1 = center.getZ() + Math.sin(angle1) * radius;
-                double x2 = center.getX() + Math.cos(angle2) * radius;
-                double z2 = center.getZ() + Math.sin(angle2) * radius;
+            // 一笔画路径：0->2->4->0->1->3->5->1
+            int[] path = {0, 2, 4, 0, 1, 3, 5, 1};
+
+            // 绘制六芒星
+            for (int i = 0; i < path.length - 1; i++) {
+                double x1 = vertexX[path[i]];
+                double z1 = vertexZ[path[i]];
+                double x2 = vertexX[path[i + 1]];
+                double z2 = vertexZ[path[i + 1]];
 
                 // 绘制线段
                 double steps = 10;
@@ -151,24 +160,14 @@ public class PlayerListener implements Listener {
                 }
             }
 
-            // 绘制第二个三角形（旋转30度）
-            rotation += Math.PI / points;
-            for (int i = 0; i < points; i += 2) {
-                double angle1 = (2 * Math.PI * i / points) + rotation;
-                double angle2 = (2 * Math.PI * ((i + 2) % points) / points) + rotation;
-
-                double x1 = center.getX() + Math.cos(angle1) * radius;
-                double z1 = center.getZ() + Math.sin(angle1) * radius;
-                double x2 = center.getX() + Math.cos(angle2) * radius;
-                double z2 = center.getZ() + Math.sin(angle2) * radius;
-
-                // 绘制线段
-                double steps = 10;
-                for (double j = 0; j <= steps; j++) {
-                    double x = x1 + (x2 - x1) * (j / steps);
-                    double z = z1 + (z2 - z1) * (j / steps);
-                    player.spawnParticle(particle, x, center.getY() + height, z, 1, 0, 0, 0, 0);
-                }
+            // 绘制底座圆环
+            double circleRadius = config.getDouble("particles.center.circle_radius", 2.0);
+            int circlePoints = config.getInt("particles.center.circle_points", 30);
+            for (int i = 0; i < circlePoints; i++) {
+                double angle = (2 * Math.PI * i / circlePoints) + rotation;
+                double x = center.getX() + Math.cos(angle) * circleRadius;
+                double z = center.getZ() + Math.sin(angle) * circleRadius;
+                player.spawnParticle(particle, x, center.getY() + height * 0.5, z, 1, 0, 0, 0, 0);
             }
         } catch (IllegalArgumentException e) {
             plugin.getSLF4JLogger().warn("无效的粒子类型: {}", config.getString("particles.center.type"));
