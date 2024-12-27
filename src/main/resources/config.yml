@@ -1,0 +1,69 @@
+# 锚点系统配置文件
+
+settings:
+  # 传送冷却时间（秒）
+  cooldown-time: 180
+  
+  # 锚点解锁范围（方块）
+  unlock-radius: 5
+  
+  # 解锁声音设置
+  unlock-sound: BLOCK_ENCHANTMENT_TABLE_USE
+  unlock-sound-volume: 10.0
+  unlock-sound-pitch: 1.0
+
+# 数据存储设置
+storage:
+  # 数据文件名
+  filename: 'landmarks.yml'
+
+# 消息设置
+messages:
+  prefix: '<gradient:gold:yellow>[魔法锚点]</gradient> '
+  landmark-not-exist: '<gradient:red:dark_red>✧ 魔法师,这个锚点似乎并不存在于这个世界...</gradient>'
+  landmark-not-unlocked: '<gradient:red:dark_red>✧ 魔法师,你需要先解开这个锚点的封印才能使用它!</gradient>'
+  teleport-cooldown: '<gradient:red:dark_red>✧ 魔法师,传送魔法还在冷却中,需要等待 <time> 秒才能再次施法...</gradient>'
+  teleport-success: '<gradient:green:dark_green>✧ 魔法师成功施展传送术,抵达了锚点 <landmark>!</gradient>'
+  teleport-failed: '<gradient:red:dark_red>✧ 糟糕,传送魔法施展失败了!</gradient>'
+  unlock-title: '<gradient:gold:yellow>✧ 新的魔法锚点解封了!</gradient>'
+  unlock-subtitle: '<white><landmark_name></white>'
+  unlock-message: '<gradient:green:aqua>✧ 魔法师解开了锚点 <gold><landmark_name></gold> 的封印!</gradient>'
+  command-player-only: '<gradient:red:dark_red>✧ 抱歉,只有魔法师才能使用这个咒语!</gradient>'
+  command-usage: '<gradient:red:dark_red>✧ 魔法师,咒语的正确用法是: <usage></gradient>'
+  create-success: '<gradient:green:aqua>✧ 魔法师成功创造了新的锚点 <gold><name></gold>!</gradient>'
+  delete-success: '<gradient:green:aqua>✧ 魔法师成功抹除了锚点 <gold><name></gold>!</gradient>'
+  edit-success: '<gradient:green:aqua>✧ 魔法师修改了锚点 <gold><name></gold> 的描述!</gradient>'
+  rename-success: '<gradient:green:aqua>✧ 魔法师将锚点从 <gold><old_name></gold> 重命名为 <gold><new_name></gold>!</gradient>'
+  reload-success: '<gradient:green:aqua>✧ 魔法书重新加载完成!</gradient>'
+  reload-failed: '<gradient:red:dark_red>✧ 魔法书加载失败!请检查魔法记录。</gradient>'
+  not-at-landmark: '<gradient:red:dark_red>✧ 魔法师,你需要站在锚点范围内才能施展传送术!</gradient>'
+  help:
+    separator: '<gradient:gold:yellow>✧══════════ 魔法锚点咒语书 ══════════✧</gradient>'
+    command: '%prefix% <yellow>%command%</yellow>'
+  landmark-exists: '<gradient:red:dark_red>✧ 魔法师,这个锚点名称已被占用了!</gradient>'
+  create-title: '<gradient:gold:yellow>✧══════════ 魔法锚点 ══════════✧</gradient>'
+  create-subtitle: '<gradient:green:aqua>成功创造新的锚点!</gradient>'
+  delete-title: '<gradient:red:dark_red>✧══════════ 魔法锚点 ══════════✧</gradient>'
+  delete-subtitle: '<gradient:red:dark_red>锚点已被抹除!</gradient>'
+  rename-title: '<gradient:gold:yellow>✧══════════ 魔法锚点 ══════════✧</gradient>'
+  rename-subtitle: '<gradient:green:aqua>锚点重命名成功!</gradient>'
+  
+# GUI设置
+gui:
+  title: '<gradient:gold:yellow>✧ 魔法锚点传送之书 ✧</gradient>'
+  size: 27  # 菜单大小（必须是9的倍数）
+  lore:
+    coordinates: '<gradient:aqua:blue>魔法坐标: X:%x% Y:%y% Z:%z%</gradient>'
+    description: '<gradient:green:aqua>魔法描述: %description%</gradient>'
+    click-teleport: '<gradient:gold:yellow>✧ 点击施展传送魔法 ✧</gradient>'
+    locked-coordinates: '<gray>魔法坐标: ???</gray>'
+    locked-description: '<gray>魔法描述: ???</gray>'
+    locked: '<gradient:red:dark_red>✧ 等待解封的魔法锚点 ✧</gradient>'
+  
+  items:
+    unlocked:
+      material: ENDER_EYE
+      name: '<gradient:gold:yellow>✧ %landmark_name% ✧</gradient>'
+    locked:
+      material: ENDER_PEARL
+      name: '<gradient:gray:dark_gray>✧ %landmark_name% ✧</gradient>' 

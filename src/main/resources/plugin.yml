@@ -1,0 +1,36 @@
+name: LandmarkSystem
+version: '1.0.0'
+main: com.example.landmark.LandmarkPlugin
+api-version: '1.20'
+description: '一个功能强大的锚点传送系统'
+author: YourName
+folia-supported: true
+
+commands:
+  landmark:
+    description: 锚点系统主命令
+    usage: /landmark help
+    aliases: [lm]
+
+permissions:
+  landmark.create:
+    description: 允许创建锚点
+    default: op
+  landmark.delete:
+    description: 允许删除锚点
+    default: op
+  landmark.edit:
+    description: 允许编辑锚点描述
+    default: op
+  landmark.rename:
+    description: 允许重命名锚点
+    default: op
+  landmark.reload:
+    description: 允许重载配置
+    default: op
+  landmark.teleport:
+    description: 允许传送到已解锁的锚点
+    default: true
+  landmark.menu:
+    description: 允许打开锚点菜单
+    default: true 
