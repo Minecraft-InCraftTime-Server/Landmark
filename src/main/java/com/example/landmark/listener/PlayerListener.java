@@ -1,8 +1,6 @@
 package com.example.landmark.listener;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -28,8 +26,7 @@ public class PlayerListener implements Listener {
     private final LandmarkPlugin plugin;
     private final Map<UUID, Long> lastCheckTimes = new HashMap<>();
     private static final long CHECK_INTERVAL = 500L; // 500ms检查间隔
-    private final Map<String, List<Location>> particleLocationsCache = new HashMap<>();
-    private final Map<String, Long> lastCacheUpdateTime = new HashMap<>();
+    private final Map<UUID, Location> lastPlayerLocations = new HashMap<>();
 
     public PlayerListener(LandmarkPlugin plugin) {
         this.plugin = plugin;
@@ -251,43 +248,6 @@ public class PlayerListener implements Listener {
         }
     }
 
-    private List<Location> getParticleLocations(Location landmarkLoc) {
-        String locationKey = landmarkLoc.getWorld().getName() + ","
-                + landmarkLoc.getBlockX() + ","
-                + landmarkLoc.getBlockY() + ","
-                + landmarkLoc.getBlockZ();
-
-        long currentTime = System.currentTimeMillis();
-        long cacheInterval = plugin.getConfigManager().getConfig()
-                .getLong("particles.border.update-interval", 5000);
-
-        if (!particleLocationsCache.containsKey(locationKey)
-                || currentTime - lastCacheUpdateTime.getOrDefault(locationKey, 0L) > cacheInterval) {
-            int points = plugin.getConfigManager().getConfig()
-                    .getInt("particles.border.points", 8);
-            List<Location> locations = calculateParticleLocations(landmarkLoc, points);
-            particleLocationsCache.put(locationKey, locations);
-            lastCacheUpdateTime.put(locationKey, currentTime);
-            return locations;
-        }
-
-        return particleLocationsCache.get(locationKey);
-    }
-
-    private List<Location> calculateParticleLocations(Location landmarkLoc, int points) {
-        List<Location> locations = new ArrayList<>();
-        double radius = plugin.getConfigManager().getUnlockRadius();
-        double angleIncrement = Math.PI * 2 / points;
-
-        for (double t = 0; t < Math.PI * 2; t += angleIncrement) {
-            double x = landmarkLoc.getX() + radius * Math.cos(t);
-            double z = landmarkLoc.getZ() + radius * Math.sin(t);
-            locations.add(new Location(landmarkLoc.getWorld(), x, landmarkLoc.getY(), z));
-        }
-
-        return locations;
-    }
-
     private void playUnlockSound(Player player) {
         String soundName = plugin.getConfigManager().getUnlockSound().toString();
         try {
@@ -299,5 +259,10 @@ public class PlayerListener implements Listener {
         } catch (IllegalArgumentException e) {
             plugin.getSLF4JLogger().error("无效的声音设置: {}", soundName);
         }
+    }
+
+    public void cleanup() {
+        lastPlayerLocations.clear();
+        lastCheckTimes.clear();
     }
 }
