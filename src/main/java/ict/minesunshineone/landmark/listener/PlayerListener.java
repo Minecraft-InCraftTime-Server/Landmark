@@ -1,4 +1,4 @@
-package com.example.landmark.listener;
+package ict.minesunshineone.landmark.listener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -21,9 +21,9 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
-import com.example.landmark.LandmarkPlugin;
-import com.example.landmark.gui.LandmarkMenu;
-import com.example.landmark.model.Landmark;
+import ict.minesunshineone.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.gui.LandmarkMenu;
+import ict.minesunshineone.landmark.model.Landmark;
 
 import net.kyori.adventure.title.Title;
 

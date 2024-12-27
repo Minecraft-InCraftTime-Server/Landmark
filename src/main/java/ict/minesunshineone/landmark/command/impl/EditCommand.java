@@ -1,4 +1,4 @@
-package com.example.landmark.command.impl;
+package ict.minesunshineone.landmark.command.impl;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -7,8 +7,8 @@ import java.util.stream.Collectors;
 
 import org.bukkit.command.CommandSender;
 
-import com.example.landmark.LandmarkPlugin;
-import com.example.landmark.command.SubCommand;
+import ict.minesunshineone.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.command.SubCommand;
 
 public class EditCommand extends SubCommand {
 

@@ -1,9 +1,9 @@
 name: LandmarkSystem
 version: '1.0.0'
-main: com.example.landmark.LandmarkPlugin
+main: ict.minesunshineone.landmark.LandmarkPlugin
 api-version: '1.20'
 description: '一个功能强大的锚点传送系统'
-author: YourName
+author: MineSunshineone
 folia-supported: true
 
 commands:

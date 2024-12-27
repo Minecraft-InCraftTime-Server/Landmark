@@ -1,4 +1,4 @@
-package com.example.landmark.gui;
+package ict.minesunshineone.landmark.gui;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,8 +13,8 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import com.example.landmark.LandmarkPlugin;
-import com.example.landmark.model.Landmark;
+import ict.minesunshineone.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.model.Landmark;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;

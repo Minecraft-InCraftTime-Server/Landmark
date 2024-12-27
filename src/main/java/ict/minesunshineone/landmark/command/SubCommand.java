@@ -1,10 +1,10 @@
-package com.example.landmark.command;
+package ict.minesunshineone.landmark.command;
 
 import java.util.List;
 
 import org.bukkit.command.CommandSender;
 
-import com.example.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.LandmarkPlugin;
 
 import net.kyori.adventure.text.Component;
 

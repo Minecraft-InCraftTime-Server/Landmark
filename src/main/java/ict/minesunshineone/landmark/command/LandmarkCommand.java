@@ -1,4 +1,4 @@
-package com.example.landmark.command;
+package ict.minesunshineone.landmark.command;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -12,14 +12,14 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 
-import com.example.landmark.LandmarkPlugin;
-import com.example.landmark.command.impl.CreateCommand;
-import com.example.landmark.command.impl.DeleteCommand;
-import com.example.landmark.command.impl.EditCommand;
-import com.example.landmark.command.impl.MenuCommand;
-import com.example.landmark.command.impl.ReloadCommand;
-import com.example.landmark.command.impl.RenameCommand;
-import com.example.landmark.command.impl.TeleportCommand;
+import ict.minesunshineone.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.command.impl.CreateCommand;
+import ict.minesunshineone.landmark.command.impl.DeleteCommand;
+import ict.minesunshineone.landmark.command.impl.EditCommand;
+import ict.minesunshineone.landmark.command.impl.MenuCommand;
+import ict.minesunshineone.landmark.command.impl.ReloadCommand;
+import ict.minesunshineone.landmark.command.impl.RenameCommand;
+import ict.minesunshineone.landmark.command.impl.TeleportCommand;
 
 public class LandmarkCommand implements CommandExecutor, TabCompleter {
 

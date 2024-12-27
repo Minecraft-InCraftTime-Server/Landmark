@@ -1,12 +1,12 @@
-package com.example.landmark;
+package ict.minesunshineone.landmark;
 
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import com.example.landmark.command.LandmarkCommand;
-import com.example.landmark.listener.PlayerListener;
-import com.example.landmark.manager.ConfigManager;
-import com.example.landmark.manager.LandmarkManager;
+import ict.minesunshineone.landmark.command.LandmarkCommand;
+import ict.minesunshineone.landmark.listener.PlayerListener;
+import ict.minesunshineone.landmark.manager.ConfigManager;
+import ict.minesunshineone.landmark.manager.LandmarkManager;
 
 public class LandmarkPlugin extends JavaPlugin {
 

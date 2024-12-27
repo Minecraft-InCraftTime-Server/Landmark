@@ -1,4 +1,4 @@
-package com.example.landmark.model;
+package ict.minesunshineone.landmark.model;
 
 import java.util.UUID;
 

@@ -1,4 +1,4 @@
-package com.example.landmark.manager;
+package ict.minesunshineone.landmark.manager;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,7 +9,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
-import com.example.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.LandmarkPlugin;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;

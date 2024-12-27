@@ -1,4 +1,4 @@
-package com.example.landmark.manager;
+package ict.minesunshineone.landmark.manager;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,8 +21,8 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 
-import com.example.landmark.LandmarkPlugin;
-import com.example.landmark.model.Landmark;
+import ict.minesunshineone.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.model.Landmark;
 
 import net.kyori.adventure.text.Component;
 

@@ -1,4 +1,4 @@
-package com.example.landmark.command.impl;
+package ict.minesunshineone.landmark.command.impl;
 
 import java.util.Collections;
 import java.util.List;
@@ -6,9 +6,9 @@ import java.util.List;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import com.example.landmark.LandmarkPlugin;
-import com.example.landmark.command.SubCommand;
-import com.example.landmark.gui.LandmarkMenu;
+import ict.minesunshineone.landmark.LandmarkPlugin;
+import ict.minesunshineone.landmark.command.SubCommand;
+import ict.minesunshineone.landmark.gui.LandmarkMenu;
 
 public class MenuCommand extends SubCommand {
 
