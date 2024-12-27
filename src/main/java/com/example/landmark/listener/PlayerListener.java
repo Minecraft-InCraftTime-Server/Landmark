@@ -1,8 +1,6 @@
 package com.example.landmark.listener;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -10,6 +8,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -27,9 +26,7 @@ public class PlayerListener implements Listener {
     private final LandmarkPlugin plugin;
     private final Map<UUID, Long> lastCheckTimes = new HashMap<>();
     private static final long CHECK_INTERVAL = 500L; // 500ms检查间隔
-    private final Map<String, List<Location>> particleLocationsCache = new HashMap<>();
-    private final Map<String, Long> lastCacheUpdateTime = new HashMap<>();
-    private static final long CACHE_DURATION = 5000L; // 缓存5秒
+    private final Map<UUID, Location> lastPlayerLocations = new HashMap<>();
 
     public PlayerListener(LandmarkPlugin plugin) {
         this.plugin = plugin;
@@ -107,55 +104,148 @@ public class PlayerListener implements Listener {
 
     // 优化粒子效果显示
     private void spawnLandmarkParticles(Player player, Location landmarkLoc) {
-        String locationKey = landmarkLoc.getWorld().getName() + ","
-                + landmarkLoc.getBlockX() + ","
-                + landmarkLoc.getBlockY() + ","
-                + landmarkLoc.getBlockZ();
+        FileConfiguration config = plugin.getConfigManager().getConfig();
+        double time = System.currentTimeMillis() / 1000.0;
 
-        long currentTime = System.currentTimeMillis();
-        List<Location> particleLocations;
-
-        // 检查缓存是否有效
-        if (!particleLocationsCache.containsKey(locationKey)
-                || currentTime - lastCacheUpdateTime.getOrDefault(locationKey, 0L) > CACHE_DURATION) {
-            // 计算新的粒子位置
-            particleLocations = calculateParticleLocations(landmarkLoc);
-            particleLocationsCache.put(locationKey, particleLocations);
-            lastCacheUpdateTime.put(locationKey, currentTime);
-        } else {
-            particleLocations = particleLocationsCache.get(locationKey);
+        // 六芒星魔法阵
+        if (config.getBoolean("particles.center.enabled", true)) {
+            spawnHexagramParticles(player, landmarkLoc, config, time);
         }
 
-        // 显示粒子效果
-        for (Location particleLoc : particleLocations) {
-            if (player.getLocation().distance(particleLoc) <= 32) {
-                player.spawnParticle(Particle.DRAGON_BREATH, particleLoc, 1, 0, 0, 0, 0);
-            }
+        // 边界光柱
+        if (config.getBoolean("particles.border.enabled", true)) {
+            spawnBorderPillars(player, landmarkLoc, config);
         }
-
-        // 中心点效果
-        player.spawnParticle(Particle.END_ROD, landmarkLoc.clone().add(0, 1, 0), 2, 0.1, 0.1, 0.1, 0.01);
     }
 
-    private List<Location> calculateParticleLocations(Location landmarkLoc) {
-        List<Location> locations = new ArrayList<>();
-        double radius = plugin.getConfigManager().getUnlockRadius();
-        int particleCount = 8;
-        double angleIncrement = Math.PI * 2 / particleCount;
+    private void spawnHexagramParticles(Player player, Location center, FileConfiguration config, double time) {
+        try {
+            Particle particle = Particle.valueOf(config.getString("particles.center.type", "END_ROD"));
+            double radius = config.getDouble("particles.center.star_radius", 1.5);
+            double height = config.getDouble("particles.center.height", 0.1);
+            double particleDensity = config.getDouble("particles.center.particle_density", 0.2);
 
-        for (double t = 0; t < Math.PI * 2; t += angleIncrement) {
-            double x = landmarkLoc.getX() + radius * Math.cos(t);
-            double z = landmarkLoc.getZ() + radius * Math.sin(t);
-            Location baseLoc = new Location(landmarkLoc.getWorld(), x, landmarkLoc.getY() + 0.1, z);
-            locations.add(baseLoc);
+            // 计算动画阶段
+            double duration = config.getDouble("particles.center.animation.duration", 4.0);
+            double fadeIn = config.getDouble("particles.center.animation.fade_in", 1.0);
+            double stay = config.getDouble("particles.center.animation.stay", 2.0);
+            double fadeOut = config.getDouble("particles.center.animation.fade_out", 1.0);
 
-            // 添加上升效果的位置
-            for (double y = 0; y < 2; y += 1.0) {
-                locations.add(baseLoc.clone().add(0, y, 0));
+            double cycleTime = time % duration;
+            double alpha;
+
+            if (cycleTime < fadeIn) {
+                // 渐入阶段
+                alpha = cycleTime / fadeIn;
+            } else if (cycleTime < fadeIn + stay) {
+                // 停留阶段
+                alpha = 1.0;
+            } else if (cycleTime < duration) {
+                // 渐出阶段
+                alpha = (duration - cycleTime) / fadeOut;
+            } else {
+                alpha = 0.0;
             }
-        }
 
-        return locations;
+            // 绘制静态五角星
+            double startAngle = -Math.PI / 2; // 保持五角星顶点朝上
+            double[] angles = new double[5];
+            for (int i = 0; i < 5; i++) {
+                angles[i] = startAngle + (2 * Math.PI * i / 5);
+            }
+
+            int[] order = {0, 2, 4, 1, 3, 0};
+
+            // 绘制五角星的线段
+            for (int i = 0; i < order.length - 1; i++) {
+                double x1 = center.getX() + Math.cos(angles[order[i]]) * radius;
+                double z1 = center.getZ() + Math.sin(angles[order[i]]) * radius;
+                double x2 = center.getX() + Math.cos(angles[order[i + 1]]) * radius;
+                double z2 = center.getZ() + Math.sin(angles[order[i + 1]]) * radius;
+
+                // 根据alpha值调整粒子密度
+                double density = particleDensity * (alpha + 0.1); // 添加基础密度
+                for (double j = 0; j <= 1; j += density) {
+                    double x = x1 + (x2 - x1) * j;
+                    double z = z1 + (z2 - z1) * j;
+                    player.spawnParticle(particle, x, center.getY() + height, z, 1, 0, 0, 0, 0);
+                }
+            }
+
+            // 绘制静态外圆
+            double circleRadius = radius * 1.3;
+            int points = (int) (20 * (alpha + 0.1)); // 添加基础点数
+            for (int i = 0; i < points; i++) {
+                double angle = (2 * Math.PI * i / points);
+                double x = center.getX() + Math.cos(angle) * circleRadius;
+                double z = center.getZ() + Math.sin(angle) * circleRadius;
+                player.spawnParticle(particle, x, center.getY() + height * 0.5, z, 1, 0, 0, 0, 0);
+            }
+
+        } catch (IllegalArgumentException e) {
+            plugin.getSLF4JLogger().warn("无效的粒子类型: {}", config.getString("particles.center.type"));
+        }
+    }
+
+    private void spawnBorderPillars(Player player, Location center, FileConfiguration config) {
+        try {
+            Particle particle = Particle.valueOf(config.getString("particles.border.type", "SPELL_WITCH"));
+            double height = config.getDouble("particles.border.height", 1.5);
+            double density = config.getDouble("particles.border.density", 0.03);
+            double spiralSpeed = config.getDouble("particles.border.spiral_speed", 1.0);
+            double trailLength = config.getDouble("particles.border.trail_length", 1.5);
+            int spiralCount = config.getInt("particles.border.spiral_count", 8);
+            int headDensity = config.getInt("particles.border.head_density", 6);
+            double spiralRadius = config.getDouble("particles.border.spiral_radius", 0.3);
+
+            double time = System.currentTimeMillis() / 1000.0;
+            double radius = plugin.getConfigManager().getUnlockRadius();
+
+            for (int i = 0; i < spiralCount; i++) {
+                double angleOffset = (2 * Math.PI * i / spiralCount);
+                double heightOffset = (height / spiralCount) * i;
+
+                double currentHeight = ((time * spiralSpeed) + heightOffset) % height;
+                double baseAngle = time * spiralSpeed + angleOffset;
+
+                // 使用正弦函数使螺旋更平滑
+                double spiralAngle = baseAngle + Math.sin(currentHeight * Math.PI) * spiralRadius;
+                double x = center.getX() + Math.cos(spiralAngle) * radius;
+                double z = center.getZ() + Math.sin(spiralAngle) * radius;
+
+                // 生成尾巴
+                for (double t = 0; t < trailLength; t += density) {
+                    double trailHeight = currentHeight - t;
+                    if (trailHeight >= 0 && trailHeight < height) {
+                        // 头部区域增加密度
+                        if (t < density * 4) {
+                            for (int h = 0; h < headDensity; h++) {
+                                double spread = 0.03;
+                                double offsetX = (Math.random() - 0.5) * spread;
+                                double offsetZ = (Math.random() - 0.5) * spread;
+                                player.spawnParticle(particle,
+                                        x + offsetX,
+                                        center.getY() + trailHeight,
+                                        z + offsetZ,
+                                        1, 0, 0, 0, 0);
+                            }
+                        } else {
+                            // 尾部渐变消失
+                            double fadeAlpha = Math.pow(1.0 - (t / trailLength), 1.5);
+                            if (Math.random() < fadeAlpha) {
+                                player.spawnParticle(particle,
+                                        x,
+                                        center.getY() + trailHeight,
+                                        z,
+                                        1, 0, 0, 0, 0);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            plugin.getSLF4JLogger().warn("无效的粒子类型: {}", config.getString("particles.border.type"));
+        }
     }
 
     private void playUnlockSound(Player player) {
@@ -169,5 +259,10 @@ public class PlayerListener implements Listener {
         } catch (IllegalArgumentException e) {
             plugin.getSLF4JLogger().error("无效的声音设置: {}", soundName);
         }
+    }
+
+    public void cleanup() {
+        lastPlayerLocations.clear();
+        lastCheckTimes.clear();
     }
 }

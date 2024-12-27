@@ -2,10 +2,10 @@
 
 settings:
   # 传送冷却时间（秒）
-  cooldown-time: 180
+  cooldown-time: 120
   
   # 锚点解锁范围（方块）
-  unlock-radius: 5
+  unlock-radius: 3
   
   # 解锁声音设置
   unlock-sound: BLOCK_ENCHANTMENT_TABLE_USE
@@ -70,3 +70,32 @@ gui:
   current-location:
     at-landmark: '<gradient:gold:yellow>当前位置: %landmark_name%</gradient>'
     not-at-landmark: '<red>未在任何锚点范围内</red>' 
+
+# 粒子效果设置
+particles:
+  # 五角星魔法阵
+  center:
+    enabled: true
+    type: END_ROD           
+    height: 0.1             
+    star_radius: 1.5        
+    circle_radius: 2.0      
+    particle_density: 0.3   # 增加基础密度间隔
+    animation:
+      duration: 4.0        
+      fade_in: 1.0         
+      stay: 2.0           
+      fade_out: 1.0        
+  
+  # 边界光柱
+  border:
+    enabled: true
+    type: SPELL_WITCH       
+    height: 1.5            # 降低高度
+    density: 0.03          # 增加密度
+    spiral_speed: 1.0      # 降低速度使旋转更平滑
+    trail_length: 1.5      # 增加尾巴长度
+    head_density: 6        # 增加头部密度
+    spiral_count: 8        # 增加螺旋数量
+    spiral_radius: 0.3     # 控制螺旋半径
+    display-range: 32 
