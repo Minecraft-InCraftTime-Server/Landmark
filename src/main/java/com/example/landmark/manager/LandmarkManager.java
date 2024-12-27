@@ -17,10 +17,14 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 
 import com.example.landmark.LandmarkPlugin;
 import com.example.landmark.model.Landmark;
+
+import net.kyori.adventure.text.Component;
 
 public class LandmarkManager {
 
@@ -38,24 +42,60 @@ public class LandmarkManager {
     }
 
     public void createLandmark(String name, Location location, String description) {
-        Landmark landmark = new Landmark(name, location, description);
-        landmarks.put(name.toLowerCase(), landmark);
-        saveData();
+        if (location == null || location.getWorld() == null) {
+            plugin.getSLF4JLogger().error("无法创建锚点：位置或世界为空");
+            return;
+        }
+
+        if (landmarks.containsKey(name.toLowerCase())) {
+            return;
+        }
+
+        try {
+            // 创建锚点并保存
+            Landmark landmark = new Landmark(name, location, description);
+            landmarks.put(name.toLowerCase(), landmark);
+
+            // 使用统一的方法创建实体
+            createLandmarkEntities(landmark);
+
+            plugin.getSLF4JLogger().info("成功创建锚点展示实体: {}", name);
+            saveLandmarkData();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            plugin.getSLF4JLogger().error("创建锚点时发生错误: {}", e.getMessage());
+            landmarks.remove(name.toLowerCase());
+        }
     }
 
     public void deleteLandmark(String name) {
         String lowerName = name.toLowerCase();
-        landmarks.remove(lowerName);
+        Landmark landmark = landmarks.get(lowerName);
+        if (landmark != null) {
+            // 移除交互实体
+            if (landmark.getInteractionEntityId() != null) {
+                Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
+                if (entity != null) {
+                    entity.remove();
+                }
+                landmark.setInteractionEntityId(null);
+            }
 
-        // 从所有玩家的解锁列表中移除并保存
-        for (Map.Entry<UUID, Set<String>> entry : unlockedLandmarks.entrySet()) {
-            if (entry.getValue().remove(lowerName)) {
-                savePlayerData(entry.getKey());
+            // 移除锚点数据
+            landmarks.remove(lowerName);
+
+            // 从所有玩家的解锁列表中移除
+            for (Map.Entry<UUID, Set<String>> entry : unlockedLandmarks.entrySet()) {
+                entry.getValue().remove(lowerName);
+            }
+
+            // 保存更新后的数据
+            saveLandmarkData();
+
+            // 保存所有受影响的玩家数据
+            for (UUID playerId : unlockedLandmarks.keySet()) {
+                savePlayerData(playerId);
             }
         }
-
-        // 保存锚点数据
-        saveLandmarkData();
     }
 
     public boolean isLandmarkUnlocked(Player player, String landmarkName) {
@@ -87,7 +127,7 @@ public class LandmarkManager {
             return;
         }
 
-        // 检查玩家是否在任意已解锁锚点范围内
+        // 检查玩家是否在任意已解锁锚点围内
         boolean nearUnlockedLandmark = false;
         Location playerLoc = player.getLocation();
 
@@ -111,7 +151,7 @@ public class LandmarkManager {
                     + (plugin.getConfigManager().getCooldownTime() * 1000L)
                     - System.currentTimeMillis()) / 1000;
             plugin.getConfigManager().sendMessage(player, "teleport-cooldown",
-                    "<red>传送冷却中，还需等待 <time> 秒</red>",
+                    "<red>传送中，还需等待 <time> 秒</red>",
                     "<time>", String.valueOf(Math.max(0, remainingTime)));
             return;
         }
@@ -130,7 +170,6 @@ public class LandmarkManager {
     }
 
     public final void loadData() {
-        // 加载锚点数据
         File dataFile = new File(plugin.getDataFolder(), plugin.getConfigManager().getDataFileName());
         if (dataFile.exists()) {
             YamlConfiguration data = YamlConfiguration.loadConfiguration(dataFile);
@@ -139,9 +178,23 @@ public class LandmarkManager {
                 for (String key : landmarksSection.getKeys(false)) {
                     ConfigurationSection landmarkSection = landmarksSection.getConfigurationSection(key);
                     if (landmarkSection != null) {
-                        Location location = landmarkSection.getLocation("location");
-                        String description = landmarkSection.getString("description", "暂无描述");
-                        landmarks.put(key.toLowerCase(), new Landmark(key, location, description));
+                        try {
+                            Location location = landmarkSection.getLocation("location");
+                            if (location != null && location.getWorld() != null) {
+                                String description = landmarkSection.getString("description", "暂无描述");
+                                Landmark landmark = new Landmark(key, location, description);
+                                landmarks.put(key.toLowerCase(), landmark);
+
+                                // 延迟创建实体，确保世界加载完成
+                                plugin.getServer().getRegionScheduler().runDelayed(plugin, location, task -> {
+                                    if (location.getWorld() != null && location.getChunk().isLoaded()) {
+                                        createLandmarkEntities(landmark);
+                                    }
+                                }, 100L); // 延迟5秒
+                            }
+                        } catch (IllegalArgumentException | IllegalStateException e) {
+                            plugin.getSLF4JLogger().error("加载锚点 {} 时发生错误: {}", key, e.getMessage());
+                        }
                     }
                 }
             }
@@ -174,6 +227,8 @@ public class LandmarkManager {
             Landmark landmark = entry.getValue();
             landmarkSection.set("location", landmark.getLocation());
             landmarkSection.set("description", landmark.getDescription());
+            landmarkSection.set("interaction_entity_id", landmark.getInteractionEntityId() != null
+                    ? landmark.getInteractionEntityId().toString() : null);
         }
         try {
             data.save(dataFile);
@@ -269,6 +324,8 @@ public class LandmarkManager {
             ConfigurationSection section = landmarksSection.createSection(name);
             section.set("location", landmark.getLocation());
             section.set("description", landmark.getDescription());
+            section.set("interaction_entity_id", landmark.getInteractionEntityId() != null
+                    ? landmark.getInteractionEntityId().toString() : null);
         });
 
         try {
@@ -283,7 +340,7 @@ public class LandmarkManager {
             if (backupFile.exists()) {
                 try {
                     Files.copy(backupFile.toPath(), dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    plugin.getSLF4JLogger().info("已恢复数据备份");
+                    plugin.getSLF4JLogger().info("恢复数据备份");
                 } catch (IOException ex) {
                     plugin.getSLF4JLogger().error("无法恢复数据备份: {}", ex.getMessage());
                 }
@@ -319,7 +376,7 @@ public class LandmarkManager {
         }
 
         if (cleanedCount > 0) {
-            plugin.getSLF4JLogger().info("已清理 {} 个不活跃玩家的数据", cleanedCount);
+            plugin.getSLF4JLogger().info("已清理 {} 个不活跃玩家的数", cleanedCount);
         }
     }
 
@@ -328,6 +385,58 @@ public class LandmarkManager {
         return playerLoc.getWorld() != null
                 && playerLoc.getWorld().equals(landmarkLoc.getWorld())
                 && playerLoc.distance(landmarkLoc) <= plugin.getConfigManager().getUnlockRadius();
+    }
+
+    private void createLandmarkEntities(Landmark landmark) {
+        try {
+            Location location = landmark.getLocation();
+            if (location.getWorld() == null || !location.getChunk().isLoaded()) {
+                return;
+            }
+
+            // 确保位置是方块中心
+            Location centerLoc = location.clone();
+            centerLoc.setX(location.getBlockX() + 0.5);
+            centerLoc.setY(location.getBlockY());
+            centerLoc.setZ(location.getBlockZ() + 0.5);
+
+            // 创建交互实体
+            Location interactLoc = centerLoc.clone().add(0, 0.5, 0);
+            Interaction interaction = location.getWorld().spawn(interactLoc, Interaction.class, entity -> {
+                entity.setInteractionWidth(1.5f);
+                entity.setInteractionHeight(2.0f);
+                entity.setPersistent(true);
+                entity.setInvulnerable(true);
+                entity.setCustomNameVisible(true);
+                entity.customName(Component.text("§e[点击打开]"));
+                entity.setGravity(false);
+            });
+
+            landmark.setInteractionEntityId(interaction.getUniqueId());
+            saveLandmarkData(); // 保存实体ID
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            plugin.getSLF4JLogger().error("重建锚点实体时发生错误: {}", e.getMessage());
+        }
+    }
+
+    public void cleanup() {
+        for (Landmark landmark : landmarks.values()) {
+            // 清理展示实体
+            if (landmark.getDisplayEntityId() != null) {
+                Entity entity = Bukkit.getEntity(landmark.getDisplayEntityId());
+                if (entity != null) {
+                    entity.remove();
+                }
+            }
+
+            // 清理交互实体
+            if (landmark.getInteractionEntityId() != null) {
+                Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
+                if (entity != null) {
+                    entity.remove();
+                }
+            }
+        }
     }
 
     // 其他方法...

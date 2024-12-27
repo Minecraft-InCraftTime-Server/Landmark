@@ -33,7 +33,7 @@ public class CreateCommand extends SubCommand {
         String name = args[0];
         String description = args.length > 1 ? String.join(" ", Arrays.copyOfRange(args, 1, args.length)) : "暂无描述";
 
-        plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+        plugin.getServer().getRegionScheduler().execute(plugin, player.getLocation(), () -> {
             if (plugin.getLandmarkManager().getLandmarks().containsKey(name.toLowerCase())) {
                 plugin.getConfigManager().sendMessage(sender, "landmark-exists",
                         "<red>该锚点名称已存在！</red>");

@@ -33,4 +33,7 @@ permissions:
     default: true
   landmark.menu:
     description: 允许打开锚点菜单
+    default: true
+  landmark.interact:
+    description: 允许与锚点展示实体交互
     default: true 

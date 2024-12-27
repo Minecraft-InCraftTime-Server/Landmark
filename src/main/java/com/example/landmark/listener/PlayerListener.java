@@ -8,11 +8,17 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.player.PlayerInteractAtEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 import com.example.landmark.LandmarkPlugin;
@@ -52,7 +58,7 @@ public class PlayerListener implements Listener {
     }
 
     private void checkLandmarkUnlock(Player player, Location playerLoc) {
-        // 如果玩家是观察者模式，直接返回
+        // 如果玩家是观察模式，直接返回
         if (player.getGameMode() == GameMode.SPECTATOR) {
             return;
         }
@@ -147,7 +153,7 @@ public class PlayerListener implements Listener {
                 alpha = 0.0;
             }
 
-            // 绘制静态五角星
+            // 制静态五角星
             double startAngle = -Math.PI / 2; // 保持五角星顶点朝上
             double[] angles = new double[5];
             for (int i = 0; i < 5; i++) {
@@ -174,7 +180,7 @@ public class PlayerListener implements Listener {
 
             // 绘制静态外圆
             double circleRadius = radius * 1.3;
-            int points = (int) (20 * (alpha + 0.1)); // 添加基础点数
+            int points = (int) (20 * (alpha + 0.1)); // 添加基础点��
             for (int i = 0; i < points; i++) {
                 double angle = (2 * Math.PI * i / points);
                 double x = center.getX() + Math.cos(angle) * circleRadius;
@@ -264,5 +270,47 @@ public class PlayerListener implements Listener {
     public void cleanup() {
         lastPlayerLocations.clear();
         lastCheckTimes.clear();
+    }
+
+    @EventHandler
+    public void onPlayerInteract(PlayerInteractEvent event) {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+
+        Block block = event.getClickedBlock();
+        if (block == null) {
+            return;
+        }
+
+        // 检查是否是锚点中心方块
+        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
+            Location landmarkLoc = landmark.getLocation();
+            if (block.getLocation().equals(landmarkLoc)) {
+                event.setCancelled(true);
+                new LandmarkMenu(plugin, event.getPlayer()).open();
+                break;
+            }
+        }
+    }
+
+    @EventHandler
+    public void onPlayerInteractAtEntity(PlayerInteractAtEntityEvent event) {
+        Entity entity = event.getRightClicked();
+        if (!(entity instanceof Interaction)) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+
+        // 检查是否是锚点交互实体
+        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
+            if (landmark.getInteractionEntityId() != null
+                    && landmark.getInteractionEntityId().equals(entity.getUniqueId())) {
+                event.setCancelled(true);
+                new LandmarkMenu(plugin, player).open();
+                break;
+            }
+        }
     }
 }
