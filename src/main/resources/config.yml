@@ -70,3 +70,31 @@ gui:
   current-location:
     at-landmark: '<gradient:gold:yellow>当前位置: %landmark_name%</gradient>'
     not-at-landmark: '<red>未在任何锚点范围内</red>' 
+
+# 粒子效果设置
+particles:
+  # 锚点中心点效果
+  center:
+    type: END_ROD
+    count: 2
+    offset: 0.1
+    speed: 0.01
+    y-offset: 1.0
+    animation:
+      enabled: true
+      height-range: 2.0  # 动画高度范围
+      speed: 0.5        # 动画速度
+  
+  # 锚点范围效果
+  border:
+    type: DRAGON_BREATH
+    count: 1
+    offset: 0
+    speed: 0
+    points: 16         # 边界粒子点数量
+    update-interval: 5000  # 缓存更新间隔(毫秒)
+    display-range: 32  # 显示范围(方块)
+    animation:
+      enabled: true
+      height: 3.0      # 边界粒子柱高度
+      density: 0.5     # 每格高度的粒子密度 
