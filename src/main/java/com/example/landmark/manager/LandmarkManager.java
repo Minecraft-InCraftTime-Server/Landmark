@@ -323,10 +323,6 @@ public class LandmarkManager {
         }
     }
 
-    private boolean isWorldValid(Location location) {
-        return location != null && location.getWorld() != null;
-    }
-
     public boolean isPlayerNearLandmark(Player player, Location landmarkLoc) {
         Location playerLoc = player.getLocation();
         return playerLoc.getWorld() != null

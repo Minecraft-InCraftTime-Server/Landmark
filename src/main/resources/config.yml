@@ -67,3 +67,6 @@ gui:
     locked:
       material: ENDER_PEARL
       name: '<gradient:gray:dark_gray>✧ %landmark_name% ✧</gradient>' 
+  current-location:
+    at-landmark: '<gradient:gold:yellow>当前位置: %landmark_name%</gradient>'
+    not-at-landmark: '<red>未在任何锚点范围内</red>' 
