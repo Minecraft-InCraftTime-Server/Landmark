@@ -108,117 +108,93 @@ public class PlayerListener implements Listener {
     // 优化粒子效果显示
     private void spawnLandmarkParticles(Player player, Location landmarkLoc) {
         FileConfiguration config = plugin.getConfigManager().getConfig();
-        long currentTime = System.currentTimeMillis();
-        double time = currentTime / 1000.0; // 用于动画计算
+        double time = System.currentTimeMillis() / 1000.0;
 
-        // 中心点螺旋效果
-        if (config.getBoolean("particles.center.animation.enabled", true)) {
-            spawnCenterSpiral(player, landmarkLoc, config, time);
+        // 六芒星魔法阵
+        if (config.getBoolean("particles.center.enabled", true)) {
+            spawnHexagramParticles(player, landmarkLoc, config, time);
         }
 
-        // 边界光柱效果
-        if (config.getBoolean("particles.border.animation.enabled", true)) {
-            spawnBorderPillars(player, landmarkLoc, config, time);
-        }
-
-        // 环绕效果
-        if (config.getBoolean("particles.orbit.enabled", true)) {
-            spawnOrbitParticles(player, landmarkLoc, config, time);
-        }
-
-        // 地面魔法阵
-        if (config.getBoolean("particles.magic_circle.enabled", true)) {
-            spawnMagicCircle(player, landmarkLoc, config, time);
+        // 边界光柱
+        if (config.getBoolean("particles.border.enabled", true)) {
+            spawnBorderPillars(player, landmarkLoc, config);
         }
     }
 
-    private void spawnCenterSpiral(Player player, Location center, FileConfiguration config, double time) {
+    private void spawnHexagramParticles(Player player, Location center, FileConfiguration config, double time) {
         try {
-            Particle centerParticle = Particle.valueOf(config.getString("particles.center.type", "END_ROD"));
-            double spiralRadius = config.getDouble("particles.center.animation.spiral.radius", 1.0);
-            double spiralSpeed = config.getDouble("particles.center.animation.spiral.speed", 2.0);
-            double heightRange = config.getDouble("particles.center.animation.height-range", 2.0);
-            double baseY = center.getY() + config.getDouble("particles.center.y-offset", 1.0);
+            Particle particle = Particle.valueOf(config.getString("particles.center.type", "END_ROD"));
+            double radius = config.getDouble("particles.center.star_radius", 1.5);
+            double height = config.getDouble("particles.center.height", 0.1);
+            double rotationSpeed = config.getDouble("particles.center.rotation_speed", 0.8);
+            int points = config.getInt("particles.center.points", 6);
 
-            // 创建螺旋上升效果
-            for (double y = 0; y < heightRange; y += 0.2) {
-                double angle = y * 5 + time * spiralSpeed;
-                double x = center.getX() + Math.cos(angle) * spiralRadius;
-                double z = center.getZ() + Math.sin(angle) * spiralRadius;
-                double yOffset = baseY + y + Math.sin(time * 2) * 0.2;
+            // 计算旋转角度
+            double rotation = time * rotationSpeed;
 
-                player.spawnParticle(centerParticle, x, yOffset, z, 1, 0, 0, 0, 0);
+            // 绘制第一个三角形
+            for (int i = 0; i < points; i += 2) {
+                double angle1 = (2 * Math.PI * i / points) + rotation;
+                double angle2 = (2 * Math.PI * ((i + 2) % points) / points) + rotation;
+
+                double x1 = center.getX() + Math.cos(angle1) * radius;
+                double z1 = center.getZ() + Math.sin(angle1) * radius;
+                double x2 = center.getX() + Math.cos(angle2) * radius;
+                double z2 = center.getZ() + Math.sin(angle2) * radius;
+
+                // 绘制线段
+                double steps = 10;
+                for (double j = 0; j <= steps; j++) {
+                    double x = x1 + (x2 - x1) * (j / steps);
+                    double z = z1 + (z2 - z1) * (j / steps);
+                    player.spawnParticle(particle, x, center.getY() + height, z, 1, 0, 0, 0, 0);
+                }
+            }
+
+            // 绘制第二个三角形（旋转30度）
+            rotation += Math.PI / points;
+            for (int i = 0; i < points; i += 2) {
+                double angle1 = (2 * Math.PI * i / points) + rotation;
+                double angle2 = (2 * Math.PI * ((i + 2) % points) / points) + rotation;
+
+                double x1 = center.getX() + Math.cos(angle1) * radius;
+                double z1 = center.getZ() + Math.sin(angle1) * radius;
+                double x2 = center.getX() + Math.cos(angle2) * radius;
+                double z2 = center.getZ() + Math.sin(angle2) * radius;
+
+                // 绘制线段
+                double steps = 10;
+                for (double j = 0; j <= steps; j++) {
+                    double x = x1 + (x2 - x1) * (j / steps);
+                    double z = z1 + (z2 - z1) * (j / steps);
+                    player.spawnParticle(particle, x, center.getY() + height, z, 1, 0, 0, 0, 0);
+                }
             }
         } catch (IllegalArgumentException e) {
             plugin.getSLF4JLogger().warn("无效的粒子类型: {}", config.getString("particles.center.type"));
         }
     }
 
-    private void spawnBorderPillars(Player player, Location center, FileConfiguration config, double time) {
+    private void spawnBorderPillars(Player player, Location center, FileConfiguration config) {
         try {
-            Particle borderParticle = Particle.valueOf(config.getString("particles.border.type", "DRAGON_BREATH"));
+            Particle particle = Particle.valueOf(config.getString("particles.border.type", "SPELL_WITCH"));
             List<Location> baseLocations = getParticleLocations(center);
-            double height = config.getDouble("particles.border.animation.height", 3.0);
-            double density = config.getDouble("particles.border.animation.density", 0.5);
-            double waveAmplitude = config.getDouble("particles.border.animation.wave.amplitude", 0.3);
-            double waveFrequency = config.getDouble("particles.border.animation.wave.frequency", 2.0);
+            double height = config.getDouble("particles.border.height", 1.0);
+            double density = config.getDouble("particles.border.density", 0.2);
 
             for (Location baseLoc : baseLocations) {
                 if (player.getLocation().distance(baseLoc) <= config.getInt("particles.border.display-range", 32)) {
                     for (double y = 0; y <= height; y += density) {
-                        double wave = Math.sin(time * waveFrequency + (baseLoc.getX() + baseLoc.getZ()) * 0.5) * waveAmplitude;
-                        Location particleLoc = baseLoc.clone().add(0, y + wave, 0);
-                        player.spawnParticle(borderParticle, particleLoc, 1, 0, 0, 0, 0);
+                        player.spawnParticle(particle,
+                                baseLoc.getX(),
+                                center.getY() + y,
+                                baseLoc.getZ(),
+                                1, 0, 0, 0, 0);
                     }
                 }
             }
         } catch (IllegalArgumentException e) {
             plugin.getSLF4JLogger().warn("无效的粒子类型: {}", config.getString("particles.border.type"));
-        }
-    }
-
-    private void spawnOrbitParticles(Player player, Location center, FileConfiguration config, double time) {
-        try {
-            Particle orbitParticle = Particle.valueOf(config.getString("particles.orbit.type", "SOUL_FIRE_FLAME"));
-            double radius = config.getDouble("particles.orbit.radius", 2.0);
-            double speed = config.getDouble("particles.orbit.speed", 1.5);
-            double height = config.getDouble("particles.orbit.height", 1.5);
-            int particles = config.getInt("particles.orbit.particles", 3);
-
-            for (int i = 0; i < particles; i++) {
-                double angle = (2 * Math.PI * i / particles) + time * speed;
-                double x = center.getX() + Math.cos(angle) * radius;
-                double y = center.getY() + height + Math.sin(time * 2) * 0.3;
-                double z = center.getZ() + Math.sin(angle) * radius;
-
-                player.spawnParticle(orbitParticle, x, y, z, 1, 0, 0, 0, 0);
-            }
-        } catch (IllegalArgumentException e) {
-            plugin.getSLF4JLogger().warn("无效的粒子类型: {}", config.getString("particles.orbit.type"));
-        }
-    }
-
-    private void spawnMagicCircle(Player player, Location center, FileConfiguration config, double time) {
-        try {
-            Particle circleParticle = Particle.valueOf(config.getString("particles.magic_circle.type", "SPELL_WITCH"));
-            int rings = config.getInt("particles.magic_circle.rings", 2);
-            int points = config.getInt("particles.magic_circle.points", 20);
-            double rotationSpeed = config.getDouble("particles.magic_circle.rotation_speed", 1.0);
-
-            for (int ring = 1; ring <= rings; ring++) {
-                double ringRadius = ring * 1.0;
-                double ringOffset = time * rotationSpeed * (ring % 2 == 0 ? 1 : -1);
-
-                for (int i = 0; i < points; i++) {
-                    double angle = (2 * Math.PI * i / points) + ringOffset;
-                    double x = center.getX() + Math.cos(angle) * ringRadius;
-                    double z = center.getZ() + Math.sin(angle) * ringRadius;
-
-                    player.spawnParticle(circleParticle, x, center.getY() + 0.1, z, 1, 0, 0, 0, 0);
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            plugin.getSLF4JLogger().warn("无效的粒子类型: {}", config.getString("particles.magic_circle.type"));
         }
     }
 

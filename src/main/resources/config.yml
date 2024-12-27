@@ -73,54 +73,20 @@ gui:
 
 # 粒子效果设置
 particles:
-  # 锚点中心点效果
+  # 六芒星魔法阵
   center:
-    type: END_ROD
-    count: 2
-    offset: 0.1
-    speed: 0.01
-    y-offset: 1.0
-    animation:
-      enabled: true
-      height-range: 2.0
-      speed: 0.5
-      spiral:
-        enabled: true    # 螺旋效果
-        radius: 1.0      # 螺旋半径
-        speed: 2.0       # 螺旋速度
-  
-  # 锚点范围效果
-  border:
-    type: DRAGON_BREATH
-    count: 1
-    offset: 0
-    speed: 0
-    points: 16
-    update-interval: 5000
-    display-range: 32
-    animation:
-      enabled: true
-      height: 3.0
-      density: 0.5
-      wave:
-        enabled: true    # 波浪效果
-        amplitude: 0.3   # 波浪幅度
-        frequency: 2.0   # 波浪频率
-  
-  # 环绕效果
-  orbit:
     enabled: true
-    type: SOUL_FIRE_FLAME
-    count: 1
-    radius: 2.0
-    speed: 1.5
-    height: 1.5
-    particles: 3        # 环绕粒子数量
+    type: END_ROD           # 中心和六芒星用末地烛光
+    height: 0.1             # 离地高度
+    rotation_speed: 0.8     # 旋转速度
+    star_radius: 1.5        # 六芒星半径
+    points: 6               # 六芒星顶点数
     
-  # 地面魔法阵
-  magic_circle:
+  # 边界光柱
+  border:
     enabled: true
-    type: SPELL_WITCH
-    rings: 2            # 魔法阵环数
-    points: 20          # 每环点数
-    rotation_speed: 1.0 # 旋转速度 
+    type: SPELL_WITCH       # 边界用女巫魔法
+    points: 16              # 边界点数
+    height: 1.0            # 光柱高度
+    density: 0.2           # 光柱粒子密度
+    display-range: 32 
