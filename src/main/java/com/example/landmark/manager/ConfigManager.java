@@ -128,7 +128,10 @@ public class ConfigManager {
         if (sender instanceof Player) {
             sender.sendMessage(message);
         } else if (message != null) {
-            sender.sendMessage(PlainTextComponentSerializer.plainText().serialize(message));
+            String plainText = PlainTextComponentSerializer.plainText().serialize(message);
+            if (plainText != null) {
+                sender.sendMessage(plainText);
+            }
         }
     }
 

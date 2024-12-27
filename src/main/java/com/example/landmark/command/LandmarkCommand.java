@@ -21,13 +21,10 @@ import com.example.landmark.command.impl.ReloadCommand;
 import com.example.landmark.command.impl.RenameCommand;
 import com.example.landmark.command.impl.TeleportCommand;
 
-import net.kyori.adventure.text.minimessage.MiniMessage;
-
 public class LandmarkCommand implements CommandExecutor, TabCompleter {
 
     private final LandmarkPlugin plugin;
     private final Map<String, SubCommand> subCommands;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public LandmarkCommand(LandmarkPlugin plugin) {
         this.plugin = plugin;

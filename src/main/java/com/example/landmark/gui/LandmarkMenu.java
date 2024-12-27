@@ -17,7 +17,6 @@ import com.example.landmark.LandmarkPlugin;
 import com.example.landmark.model.Landmark;
 
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 public class LandmarkMenu {
@@ -25,7 +24,6 @@ public class LandmarkMenu {
     private final LandmarkPlugin plugin;
     private final Player player;
     private final Inventory inventory;
-    private final MiniMessage miniMessage = MiniMessage.miniMessage();
 
     public LandmarkMenu(LandmarkPlugin plugin, Player player) {
         this.plugin = plugin;
@@ -114,7 +112,7 @@ public class LandmarkMenu {
             return item;
         }
 
-        // 直接使用锚点名称，不添加格式
+        // ��接使用锚点名称，不添加格式
         meta.displayName(Component.text(landmark.getName()));
 
         List<Component> lore = new ArrayList<>();
@@ -141,7 +139,7 @@ public class LandmarkMenu {
                 .replaceText(builder -> builder.match("%description%").replacement(landmark.getDescription())));
 
         lore.add(Component.empty());
-        lore.add(plugin.getConfigManager().getMessage("gui.lore.click-teleport", "<yellow>点击传送到此锚点</yellow>"));
+        lore.add(plugin.getConfigManager().getMessage("gui.lore.click-teleport", "<yellow>点击���送到此锚点</yellow>"));
     }
 
     private void addLockedLore(List<Component> lore, Landmark landmark) {
