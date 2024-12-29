@@ -50,34 +50,38 @@ messages:
   
 # GUI设置
 gui:
-  title: '<gradient:gold:yellow>✧ 魔法锚点传送之书 ✧</gradient>'
+  title: '<#c7a3ed><bold>✧ 魔法锚点系统 ✦</bold>'
   size: 45
   border:
-    material: PURPLE_STAINED_GLASS_PANE
+    material: BLACK_STAINED_GLASS_PANE
     name: ' '
   items:
     current:
-      material: BEACON
+      material: CONDUIT
       locked_material: BARRIER
     unlocked:
-      material: NETHER_STAR
-      name: '<gradient:aqua:blue>✧ %landmark_name% ✧</gradient>'
+      material: AMETHYST_SHARD
+      name: '<#c7a3ed><bold>%landmark_name%</bold>'
       glow: true
     locked:
       material: BARRIER
-      name: '<gray>✧ %landmark_name% ✧</gray>'
+      name: '<gray><bold>%landmark_name%</bold>'
   lore:
-    world: '<#4facfe>世界: %world%'
-    coordinates: '<#43e97b>坐标: X:%x% Y:%y% Z:%z%'
-    description: '<#fa709a>描述: %description%'
-    click-teleport: '<#ffd700>➤ 点击传送到此处'
-    locked-coordinates: '<gray>坐标: ???'
-    locked-description: '<gray>描述: ???'
-    locked: '<red>⚠ 尚未解锁'
-    separator: '<#ffd700>▰▰▰▰▰▰▰▰▰▰▰▰▰▰'
+    world: '<#c7a3ed><bold>• 位置</bold> <white><bold>%world%</bold>'
+    coordinates: '<#c7a3ed><bold>• 坐标</bold> <white><bold>%x% %y% %z%</bold>'
+    description: '<#c7a3ed><bold>• 描述</bold> <white><bold>%description%</bold>'
+    click-teleport: '<#c7a3ed><bold>▸ 点击传送</bold>'
+    locked-coordinates: '<#c7a3ed><bold>• 坐标</bold> <gray><bold>未知</bold>'
+    locked-description: '<#c7a3ed><bold>• 描述</bold> <gray><bold>未知</bold>'
+    locked: '<gray><bold>该锚点尚未解封</bold>'
+    separator: '<#c7a3ed><bold>﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍</bold>'
   current-location:
-    at-landmark: '<gradient:gold:yellow>当前位置: %landmark_name%</gradient>'
-    not-at-landmark: '<red>未在任何锚点范围内</red>' 
+    at-landmark: '<#c7a3ed><bold>✦ %landmark_name%</bold>
+
+<white><bold>当前所在位置</bold>'
+    not-at-landmark: '<#c7a3ed><bold>✦ 未解锁区域</bold>
+
+<white><bold>需要站在已解锁的锚点处</bold>'
 
 # 粒子效果设置
 particles:
