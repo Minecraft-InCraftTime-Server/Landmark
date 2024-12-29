@@ -23,7 +23,6 @@ import org.bukkit.entity.Player;
 
 import ict.minesunshineone.landmark.LandmarkPlugin;
 import ict.minesunshineone.landmark.model.Landmark;
-
 import net.kyori.adventure.text.Component;
 
 public class LandmarkManager {
@@ -116,14 +115,21 @@ public class LandmarkManager {
     }
 
     public void teleport(Player player, String landmarkName) {
-        Landmark targetLandmark = landmarks.get(landmarkName.toLowerCase());
+        // 规范化名称处理
+        String normalizedName = landmarkName.toLowerCase().trim();
+
+        // 检查锚点是否存在
+        Landmark targetLandmark = landmarks.get(normalizedName);
         if (targetLandmark == null) {
-            plugin.getConfigManager().sendMessage(player, "landmark-not-exist", "");
+            plugin.getConfigManager().sendMessage(player, "landmark-not-exist",
+                    "<red>该锚点不存在！</red>");
             return;
         }
 
-        if (!isLandmarkUnlocked(player, landmarkName)) {
-            plugin.getConfigManager().sendMessage(player, "landmark-not-unlocked", "");
+        // 检查是否已解锁
+        if (!isLandmarkUnlocked(player, normalizedName)) {
+            plugin.getConfigManager().sendMessage(player, "landmark-not-unlocked",
+                    "<red>你需要先解锁该锚点！</red>");
             return;
         }
 
@@ -156,6 +162,7 @@ public class LandmarkManager {
             return;
         }
 
+        // 执行传送
         plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
             player.teleportAsync(targetLandmark.getLocation()).thenAccept(result -> {
                 if (result) {

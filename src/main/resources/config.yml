@@ -51,22 +51,30 @@ messages:
 # GUI设置
 gui:
   title: '<gradient:gold:yellow>✧ 魔法锚点传送之书 ✧</gradient>'
-  size: 27  # 菜单大小（必须是9的倍数）
-  lore:
-    coordinates: '<gradient:aqua:blue>魔法坐标: X:%x% Y:%y% Z:%z%</gradient>'
-    description: '<gradient:green:aqua>魔法描述: %description%</gradient>'
-    click-teleport: '<gradient:gold:yellow>✧ 点击施展传送魔法 ✧</gradient>'
-    locked-coordinates: '<gray>魔法坐标: ???</gray>'
-    locked-description: '<gray>魔法描述: ???</gray>'
-    locked: '<gradient:red:dark_red>✧ 等待解封的魔法锚点 ✧</gradient>'
-  
+  size: 45
+  border:
+    material: PURPLE_STAINED_GLASS_PANE
+    name: ' '
   items:
+    current:
+      material: BEACON
+      locked_material: BARRIER
     unlocked:
-      material: ENDER_EYE
-      name: '<gradient:gold:yellow>✧ %landmark_name% ✧</gradient>'
+      material: NETHER_STAR
+      name: '<gradient:aqua:blue>✧ %landmark_name% ✧</gradient>'
+      glow: true
     locked:
-      material: ENDER_PEARL
-      name: '<gradient:gray:dark_gray>✧ %landmark_name% ✧</gradient>' 
+      material: BARRIER
+      name: '<gray>✧ %landmark_name% ✧</gray>'
+  lore:
+    world: '<#4facfe>世界: %world%'
+    coordinates: '<#43e97b>坐标: X:%x% Y:%y% Z:%z%'
+    description: '<#fa709a>描述: %description%'
+    click-teleport: '<#ffd700>➤ 点击传送到此处'
+    locked-coordinates: '<gray>坐标: ???'
+    locked-description: '<gray>描述: ???'
+    locked: '<red>⚠ 尚未解锁'
+    separator: '<#ffd700>▰▰▰▰▰▰▰▰▰▰▰▰▰▰'
   current-location:
     at-landmark: '<gradient:gold:yellow>当前位置: %landmark_name%</gradient>'
     not-at-landmark: '<red>未在任何锚点范围内</red>' 
