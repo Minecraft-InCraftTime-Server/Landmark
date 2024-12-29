@@ -76,12 +76,12 @@ gui:
     locked: '<gray><bold>该锚点尚未解封</bold>'
     separator: '<#c7a3ed><bold>﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍</bold>'
   current-location:
-    at-landmark: '<#c7a3ed><bold>✦ %landmark_name%</bold>
-
-<white><bold>当前所在位置</bold>'
-    not-at-landmark: '<#c7a3ed><bold>✦ 未解锁区域</bold>
-
-<white><bold>需要站在已解锁的锚点处</bold>'
+    at-landmark: |
+      <#c7a3ed><bold>✦ %landmark_name%</bold>
+      <white><bold>当前所在位置</bold>
+    not-at-landmark: |
+      <#c7a3ed><bold>✦ 未解锁区域</bold>
+      <white><bold>需要站在已解锁的锚点处</bold>
 
 # 粒子效果设置
 particles:

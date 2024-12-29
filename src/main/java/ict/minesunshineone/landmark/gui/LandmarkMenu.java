@@ -102,7 +102,7 @@ public class LandmarkMenu {
 
     private ItemStack createCurrentLocationItem(boolean isAtAnyLandmark, Landmark currentLandmark) {
         Material material = isAtAnyLandmark
-                ? Material.valueOf(plugin.getConfigManager().getConfig().getString("gui.items.current.material", "BEACON"))
+                ? Material.valueOf(plugin.getConfigManager().getConfig().getString("gui.items.current.material", "CONDUIT"))
                 : Material.valueOf(plugin.getConfigManager().getConfig().getString("gui.items.current.locked_material", "BARRIER"));
 
         ItemStack item = new ItemStack(material);
@@ -111,23 +111,25 @@ public class LandmarkMenu {
             return item;
         }
 
+        List<Component> lore;
         if (isAtAnyLandmark && currentLandmark != null) {
-            String nameFormat = plugin.getConfigManager().getConfig().getString("gui.current-location.at-landmark",
-                    "<gradient:gold:yellow>当前位置: %landmark_name%</gradient>");
-            meta.displayName(miniMessage.deserialize(nameFormat.replace("%landmark_name%", currentLandmark.getName())));
-
-            List<Component> lore = new ArrayList<>();
-            addUnlockedLore(lore, currentLandmark, currentLandmark.getLocation());
-            meta.lore(lore);
+            lore = plugin.getConfigManager().getMultilineMessage(
+                    "gui.current-location.at-landmark",
+                    "",
+                    "%landmark_name%", currentLandmark.getName()
+            );
         } else {
-            String nameFormat = plugin.getConfigManager().getConfig().getString("gui.current-location.not-at-landmark",
-                    "<red>未在任何锚点范围内</red>");
-            meta.displayName(miniMessage.deserialize(nameFormat));
+            lore = plugin.getConfigManager().getMultilineMessage(
+                    "gui.current-location.not-at-landmark",
+                    ""
+            );
+        }
 
-            List<Component> lore = new ArrayList<>();
-            lore.add(miniMessage.deserialize(plugin.getConfigManager().getConfig()
-                    .getString("gui.lore.not-at-landmark", "<gray>需要站在已解锁的锚点范围内</gray>")));
-            meta.lore(lore);
+        if (!lore.isEmpty()) {
+            meta.displayName(lore.get(0));
+            if (lore.size() > 1) {
+                meta.lore(lore.subList(1, lore.size()));
+            }
         }
 
         item.setItemMeta(meta);
