@@ -11,11 +11,23 @@ public class Landmark {
     private String description;
     private UUID displayEntityId;
     private UUID interactionEntityId;
+    private int menuRow;    // 在菜单中的行位置
+    private int menuColumn; // 在菜单中的列位置
 
     public Landmark(String name, Location location, String description) {
         this.name = name;
         this.location = location;
         this.description = description;
+        this.menuRow = 1;    // 默认从第二行开始（索引1）
+        this.menuColumn = 1; // 默认从第一列开始（索引1）
+    }
+
+    public Landmark(String name, Location location, String description, int menuRow, int menuColumn) {
+        this.name = name;
+        this.location = location;
+        this.description = description;
+        this.menuRow = menuRow;
+        this.menuColumn = menuColumn;
     }
 
     public String getName() {
@@ -56,5 +68,21 @@ public class Landmark {
 
     public void setInteractionEntityId(UUID interactionEntityId) {
         this.interactionEntityId = interactionEntityId;
+    }
+
+    public int getMenuRow() {
+        return menuRow;
+    }
+
+    public void setMenuRow(int menuRow) {
+        this.menuRow = menuRow;
+    }
+
+    public int getMenuColumn() {
+        return menuColumn;
+    }
+
+    public void setMenuColumn(int menuColumn) {
+        this.menuColumn = menuColumn;
     }
 }

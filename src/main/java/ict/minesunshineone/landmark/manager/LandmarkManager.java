@@ -51,8 +51,11 @@ public class LandmarkManager {
         }
 
         try {
+            // 计算新锚点的菜单位置
+            int[] menuPosition = calculateNextMenuPosition();
+
             // 创建锚点并保存
-            Landmark landmark = new Landmark(name, location, description);
+            Landmark landmark = new Landmark(name, location, description, menuPosition[0], menuPosition[1]);
             landmarks.put(name.toLowerCase(), landmark);
 
             // 使用统一的方法创建实体
@@ -64,6 +67,43 @@ public class LandmarkManager {
             plugin.getSLF4JLogger().error("创建锚点时发生错误: {}", e.getMessage());
             landmarks.remove(name.toLowerCase());
         }
+    }
+
+    private int[] calculateNextMenuPosition() {
+        int maxRow = 1;  // 从第二行开始（索引1）
+        int maxCol = 1;  // 从第一列开始（索引1）
+        boolean[][] occupied = new boolean[4][9]; // 4行9列的网格，实际使用1-3行，1-7列
+
+        // 标记已占用的位置
+        for (Landmark landmark : landmarks.values()) {
+            int row = landmark.getMenuRow();
+            int col = landmark.getMenuColumn();
+            if (row >= 1 && row <= 3 && col >= 1 && col <= 7) {  // 修改范围：第2-4行（索引1-3），第1-7列
+                occupied[row][col] = true;
+                maxRow = Math.max(maxRow, row);
+                maxCol = Math.max(maxCol, col);
+            }
+        }
+
+        // 寻找下一个可用位置（从第二行到第四行，第一列到第七列）
+        for (int row = 1; row <= 3; row++) {
+            for (int col = 1; col <= 7; col++) {
+                if (!occupied[row][col]) {
+                    return new int[]{row, col};
+                }
+            }
+        }
+
+        // 如果当前行未满，添加到当前行的下一个位置
+        if (maxCol < 7) {
+            return new int[]{maxRow, maxCol + 1};
+        }
+        // 如果需要新的一行（最多到第3行，对应实际的第4行）
+        if (maxRow < 3) {
+            return new int[]{maxRow + 1, 1};  // 新行从第一列开始
+        }
+        // 如果菜单已满，返回默认位置（第1行第1列，对应实际的第2行第1列）
+        return new int[]{1, 1};
     }
 
     public void deleteLandmark(String name) {
@@ -189,7 +229,16 @@ public class LandmarkManager {
                             Location location = landmarkSection.getLocation("location");
                             if (location != null && location.getWorld() != null) {
                                 String description = landmarkSection.getString("description", "暂无描述");
-                                Landmark landmark = new Landmark(key, location, description);
+                                // 修改默认值：行从1开始，列从1开始
+                                int menuRow = landmarkSection.getInt("menu_row", 1);
+                                int menuColumn = landmarkSection.getInt("menu_column", 1);
+
+                                Landmark landmark = new Landmark(key, location, description, menuRow, menuColumn);
+                                String interactionId = landmarkSection.getString("interaction_entity_id");
+                                if (interactionId != null) {
+                                    landmark.setInteractionEntityId(UUID.fromString(interactionId));
+                                }
+
                                 landmarks.put(key.toLowerCase(), landmark);
 
                                 // 延迟创建实体，确保世界加载完成
@@ -197,17 +246,24 @@ public class LandmarkManager {
                                     if (location.getWorld() != null && location.getChunk().isLoaded()) {
                                         createLandmarkEntities(landmark);
                                     }
-                                }, 100L); // 延迟5秒
+                                }, 100L);
                             }
                         } catch (IllegalArgumentException | IllegalStateException e) {
                             plugin.getSLF4JLogger().error("加载锚点 {} 时发生错误: {}", key, e.getMessage());
                         }
                     }
                 }
+
+                // 加载完所有锚点后，验证并修复菜单位置
+                validateAndFixMenuPositions();
             }
         }
 
         // 加载玩家数据
+        loadPlayerData();
+    }
+
+    private void loadPlayerData() {
         File playerDataFolder = new File(plugin.getDataFolder(), "player_data");
         if (!playerDataFolder.exists()) {
             playerDataFolder.mkdirs();
@@ -236,6 +292,8 @@ public class LandmarkManager {
             landmarkSection.set("description", landmark.getDescription());
             landmarkSection.set("interaction_entity_id", landmark.getInteractionEntityId() != null
                     ? landmark.getInteractionEntityId().toString() : null);
+            landmarkSection.set("menu_row", landmark.getMenuRow());
+            landmarkSection.set("menu_column", landmark.getMenuColumn());
         }
         try {
             data.save(dataFile);
@@ -270,18 +328,41 @@ public class LandmarkManager {
     }
 
     public void renameLandmark(String oldName, String newName) {
-        Landmark landmark = landmarks.remove(oldName.toLowerCase());
+        String lowerOldName = oldName.toLowerCase();
+        String lowerNewName = newName.toLowerCase();
+
+        // 检查新名称是否已存在
+        if (landmarks.containsKey(lowerNewName)) {
+            return;
+        }
+
+        Landmark landmark = landmarks.remove(lowerOldName);
         if (landmark != null) {
+            // 保持原有的菜单位置
+            int oldRow = landmark.getMenuRow();
+            int oldColumn = landmark.getMenuColumn();
+
             landmark.setName(newName);
-            landmarks.put(newName.toLowerCase(), landmark);
+            landmarks.put(lowerNewName, landmark);
 
             // 更新所有玩家的解锁列表
             for (Set<String> unlockedSet : unlockedLandmarks.values()) {
-                if (unlockedSet.remove(oldName.toLowerCase())) {
-                    unlockedSet.add(newName.toLowerCase());
+                if (unlockedSet.remove(lowerOldName)) {
+                    unlockedSet.add(lowerNewName);
                 }
             }
-            saveData();
+
+            // 确保位置信息不变
+            landmark.setMenuRow(oldRow);
+            landmark.setMenuColumn(oldColumn);
+
+            // 保存更新后的数据
+            saveLandmarkData();
+
+            // 保存所有受影响的玩家数据
+            for (UUID playerId : unlockedLandmarks.keySet()) {
+                savePlayerData(playerId);
+            }
         }
     }
 
@@ -333,6 +414,8 @@ public class LandmarkManager {
             section.set("description", landmark.getDescription());
             section.set("interaction_entity_id", landmark.getInteractionEntityId() != null
                     ? landmark.getInteractionEntityId().toString() : null);
+            section.set("menu_row", landmark.getMenuRow());
+            section.set("menu_column", landmark.getMenuColumn());
         });
 
         try {
@@ -443,6 +526,54 @@ public class LandmarkManager {
                     entity.remove();
                 }
             }
+        }
+    }
+
+    public void updateMenuPosition(String landmarkName, int newRow, int newColumn) {
+        Landmark landmark = landmarks.get(landmarkName.toLowerCase());
+        if (landmark != null) {
+            // 确保位置在有效范围内（第2-4行，即索引1-3，列1-7）
+            if (newRow >= 1 && newRow <= 3 && newColumn >= 1 && newColumn <= 7) {
+                landmark.setMenuRow(newRow);
+                landmark.setMenuColumn(newColumn);
+                saveLandmarkData();
+            }
+        }
+    }
+
+    private void validateAndFixMenuPositions() {
+        boolean[][] occupied = new boolean[4][9];
+        Map<String, int[]> newPositions = new HashMap<>();
+
+        // 第一遍：检查所有位置的有效性
+        for (Map.Entry<String, Landmark> entry : landmarks.entrySet()) {
+            Landmark landmark = entry.getValue();
+            int row = landmark.getMenuRow();
+            int col = landmark.getMenuColumn();
+
+            // 如果位置无效或已被占用，标记需要重新分配
+            if (row < 1 || row > 3 || col < 1 || col > 7 || occupied[row][col]) {
+                newPositions.put(entry.getKey(), calculateNextMenuPosition());
+            } else {
+                occupied[row][col] = true;
+            }
+        }
+
+        // 第二遍：应用新位置
+        for (Map.Entry<String, int[]> entry : newPositions.entrySet()) {
+            Landmark landmark = landmarks.get(entry.getKey());
+            if (landmark != null) {
+                int[] pos = entry.getValue();
+                landmark.setMenuRow(pos[0]);
+                landmark.setMenuColumn(pos[1]);
+                plugin.getSLF4JLogger().info("修复锚点 {} 的菜单位置为 ({}, {})",
+                        landmark.getName(), pos[0], pos[1]);
+            }
+        }
+
+        // 如果有修复，保存更新
+        if (!newPositions.isEmpty()) {
+            saveLandmarkData();
         }
     }
 
