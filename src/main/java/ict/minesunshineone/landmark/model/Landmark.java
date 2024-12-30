@@ -11,6 +11,7 @@ public class Landmark {
     private String description;
     private UUID displayEntityId;
     private UUID interactionEntityId;
+    private int order;
 
     public Landmark(String name, Location location, String description) {
         this.name = name;
@@ -56,5 +57,13 @@ public class Landmark {
 
     public void setInteractionEntityId(UUID interactionEntityId) {
         this.interactionEntityId = interactionEntityId;
+    }
+
+    public int getOrder() {
+        return order;
+    }
+
+    public void setOrder(int order) {
+        this.order = order;
     }
 }

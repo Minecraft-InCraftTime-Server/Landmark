@@ -1,8 +1,10 @@
 package ict.minesunshineone.landmark.gui;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -57,11 +59,16 @@ public class LandmarkMenu {
         ItemStack currentLocationItem = createCurrentLocationItem(isAtAnyLandmark, currentLandmark);
         inventory.setItem(40, currentLocationItem);
 
+        // 获取所有锚点并按创建顺序排序
+        List<Landmark> sortedLandmarks = plugin.getLandmarkManager().getLandmarks().values().stream()
+                .sorted(Comparator.comparingInt(Landmark::getOrder))
+                .collect(Collectors.toList());
+
         // 放置锚点物品（从第2行开始到第4行，跳过边框）
         int row = 1; // 从第2行开始
         int col = 1; // 从每行第2格开始
 
-        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
+        for (Landmark landmark : sortedLandmarks) {
             if (row >= 4) {
                 break; // 到达第4行就停止
             }
