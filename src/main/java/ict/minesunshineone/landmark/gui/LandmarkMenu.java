@@ -290,41 +290,31 @@ public class LandmarkMenu {
             return;
         }
 
-        // 检查是否点击的是已解锁的锚点物品
-        if (clickedItem.getType().toString().equals(
-                LandmarkPlugin.getInstance().getConfigManager().getConfig()
-                        .getString("gui.items.unlocked.material", "NETHER_STAR"))) {
-            try {
-                ItemMeta meta = clickedItem.getItemMeta();
-                if (meta == null || !meta.hasDisplayName()) {
-                    return;
-                }
-
-                Component displayNameComponent = meta.displayName();
-                if (displayNameComponent == null) {
-                    return;
-                }
-
-                String displayName = PlainTextComponentSerializer.plainText()
-                        .serialize(displayNameComponent);
-
-                // 检查是否是已解锁的锚点（使用 ✦ 符号）
-                if (displayName.contains("✦")) {
-                    // 提取锚点名称
-                    String landmarkName = displayName.replaceAll("✦", "").trim();
-
-                    if (!landmarkName.isEmpty()) {
-                        LandmarkPlugin plugin = LandmarkPlugin.getInstance();
-                        // 使用区域调度器执行传送
-                        plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
-                            player.closeInventory();
-                            plugin.getLandmarkManager().teleport(player, landmarkName);
-                        });
-                    }
-                }
-            } catch (Exception e) {
-                LandmarkPlugin.getInstance().getSLF4JLogger().error("GUI传送处理出错: {}", e.getMessage(), e);
+        try {
+            ItemMeta meta = clickedItem.getItemMeta();
+            if (meta == null || !meta.hasDisplayName()) {
+                return;
             }
+
+            String displayName = PlainTextComponentSerializer.plainText()
+                    .serialize(meta.displayName());
+
+            // 提取锚点名称（移除所有格式代码和空格）
+            String landmarkName = displayName.replaceAll("§[0-9a-fk-or]", "")
+                    .replaceAll("[✦\\s]", "").trim();
+
+            if (!landmarkName.isEmpty()) {
+                LandmarkPlugin plugin = LandmarkPlugin.getInstance();
+                // 检查是否是已解锁的锚点
+                if (plugin.getLandmarkManager().isLandmarkUnlocked(player, landmarkName)) {
+                    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+                        player.closeInventory();
+                        plugin.getLandmarkManager().teleport(player, landmarkName);
+                    });
+                }
+            }
+        } catch (Exception e) {
+            LandmarkPlugin.getInstance().getSLF4JLogger().error("GUI传送处理出错: {}", e.getMessage(), e);
         }
     }
 }
