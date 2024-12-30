@@ -3,32 +3,38 @@ package ict.minesunshineone.landmark.gui;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 
 import ict.minesunshineone.landmark.LandmarkPlugin;
 import ict.minesunshineone.landmark.model.Landmark;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
 public class LandmarkMenu {
 
+    private static final String LANDMARK_KEY = "landmark_name";
     private final LandmarkPlugin plugin;
     private final Player player;
     private final Inventory inventory;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
+    private final NamespacedKey landmarkKey;
 
     public LandmarkMenu(LandmarkPlugin plugin, Player player) {
         this.plugin = plugin;
         this.player = player;
+        this.landmarkKey = new NamespacedKey(plugin, LANDMARK_KEY);
         Component title = plugin.getConfigManager().getMessage("gui.title", "<gold>锚点传送菜单</gold>");
         int size = plugin.getConfigManager().getConfig().getInt("gui.size", 54);
         this.inventory = Bukkit.createInventory(null, size, title);
@@ -36,54 +42,28 @@ public class LandmarkMenu {
     }
 
     private void initializeItems() {
-        // 设置边框
         setupBorder();
-
-        // 检查玩家是否在任意锚点范围内
-        boolean isAtAnyLandmark = false;
-        Landmark currentLandmark = null;
-
-        for (Map.Entry<String, Landmark> entry : plugin.getLandmarkManager().getLandmarks().entrySet()) {
-            Landmark landmark = entry.getValue();
-            if (plugin.getLandmarkManager().isLandmarkUnlocked(player, entry.getKey())
-                    && plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
-                isAtAnyLandmark = true;
-                currentLandmark = landmark;
-                break;
-            }
-        }
-
-        // 在最后一行中间放置当前位置物品
-        ItemStack currentLocationItem = createCurrentLocationItem(isAtAnyLandmark, currentLandmark);
-        inventory.setItem(40, currentLocationItem);
-
-        // 放置锚点物品（从第2行开始到第4行，跳过边框）
-        int row = 1; // 从第2行开始
-        int col = 1; // 从每行第2格开始
-
-        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
-            if (row >= 4) {
-                break; // 到达第4行就停止
-            }
-            // 计算实际槽位
-            int slot = (row * 9) + col;
-
-            boolean isUnlocked = plugin.getLandmarkManager().isLandmarkUnlocked(player, landmark.getName());
-            ItemStack item = createLandmarkItem(landmark, isUnlocked);
-            inventory.setItem(slot, item);
-
-            // 更新列位置
-            col++;
-            // 如果到达行末（第8列），移到下一行
-            if (col == 8) {
-                col = 1;
-                row++;
-            }
-        }
+        setupCurrentLocation();
+        setupLandmarks();
     }
 
     private void setupBorder() {
-        // 获取边框物品配置
+        ItemStack border = createBorderItem();
+
+        // 设置顶部和底部边框
+        for (int i = 0; i < 9; i++) {
+            inventory.setItem(i, border.clone());
+            inventory.setItem(36 + i, border.clone());
+        }
+
+        // 设置左右边框
+        for (int i = 1; i < 4; i++) {
+            inventory.setItem(9 * i, border.clone());
+            inventory.setItem(9 * i + 8, border.clone());
+        }
+    }
+
+    private ItemStack createBorderItem() {
         Material borderMaterial = Material.valueOf(
                 plugin.getConfigManager().getConfig().getString("gui.border.material", "PURPLE_STAINED_GLASS_PANE"));
         String borderName = plugin.getConfigManager().getConfig().getString("gui.border.name", " ");
@@ -94,24 +74,60 @@ public class LandmarkMenu {
             borderMeta.displayName(miniMessage.deserialize(borderName));
             border.setItemMeta(borderMeta);
         }
+        return border;
+    }
 
-        // 设置顶部和底部边框
-        for (int i = 0; i < 9; i++) {
-            inventory.setItem(i, border.clone()); // 顶部
-            inventory.setItem(36 + i, border.clone()); // 底部
+    private void setupCurrentLocation() {
+        Landmark currentLandmark = null;
+        boolean isAtAnyLandmark = false;
+
+        for (Map.Entry<String, Landmark> entry : plugin.getLandmarkManager().getLandmarks().entrySet()) {
+            if (plugin.getLandmarkManager().isLandmarkUnlocked(player, entry.getKey())
+                    && plugin.getLandmarkManager().isPlayerNearLandmark(player, entry.getValue().getLocation())) {
+                isAtAnyLandmark = true;
+                currentLandmark = entry.getValue();
+                break;
+            }
         }
 
-        // 设置左右边框
-        for (int i = 0; i < 4; i++) {
-            inventory.setItem(9 * i, border.clone()); // 左边
-            inventory.setItem(9 * i + 8, border.clone()); // 右边
+        ItemStack currentLocationItem = createCurrentLocationItem(isAtAnyLandmark, currentLandmark);
+        inventory.setItem(40, currentLocationItem);
+    }
+
+    private void setupLandmarks() {
+        for (Map.Entry<String, Landmark> entry : plugin.getLandmarkManager().getLandmarks().entrySet()) {
+            Landmark landmark = entry.getValue();
+            int row = landmark.getMenuRow();
+            int col = landmark.getMenuColumn();
+
+            // 确保位置在有效范围内（第2-4行，即索引1-3，列1-7）
+            if (row < 1 || row > 3 || col < 1 || col > 7) {
+                plugin.getSLF4JLogger().warn("锚点 {} 的位置 ({}, {}) 超出有效范围，将在下次加载时自动修复",
+                        landmark.getName(), row, col);
+                continue;
+            }
+
+            // 计算实际槽位（row对应第2-4行）
+            int slot = (row * 9) + col;
+            boolean isUnlocked = plugin.getLandmarkManager().isLandmarkUnlocked(player, entry.getKey());
+            ItemStack item = createLandmarkItem(landmark, isUnlocked);
+
+            // 存储锚点名称到物品中
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                PersistentDataContainer container = meta.getPersistentDataContainer();
+                container.set(landmarkKey, PersistentDataType.STRING, entry.getKey());
+                item.setItemMeta(meta);
+            }
+
+            inventory.setItem(slot, item);
         }
     }
 
     private ItemStack createCurrentLocationItem(boolean isAtAnyLandmark, Landmark currentLandmark) {
         Material material = isAtAnyLandmark
-                ? Material.valueOf(plugin.getConfigManager().getConfig().getString("gui.items.current.material", "CONDUIT"))
-                : Material.valueOf(plugin.getConfigManager().getConfig().getString("gui.items.current.locked_material", "BARRIER"));
+                ? Material.valueOf(Objects.requireNonNull(plugin.getConfigManager().getConfig().getString("gui.items.current.material", "CONDUIT")))
+                : Material.valueOf(Objects.requireNonNull(plugin.getConfigManager().getConfig().getString("gui.items.current.locked_material", "BARRIER")));
 
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -145,16 +161,14 @@ public class LandmarkMenu {
     }
 
     private ItemStack createLandmarkItem(Landmark landmark, boolean isUnlocked) {
-        // 从配置获取物品类型
         String materialPath = isUnlocked ? "gui.items.unlocked.material" : "gui.items.locked.material";
-        Material material = Material.valueOf(plugin.getConfigManager().getConfig().getString(materialPath, "DIAMOND"));
+        Material material = Material.valueOf(Objects.requireNonNull(plugin.getConfigManager().getConfig().getString(materialPath, "DIAMOND")));
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) {
             return item;
         }
 
-        // 使用配置中的名称格式
         String namePath = isUnlocked ? "gui.items.unlocked.name" : "gui.items.locked.name";
         String nameFormat = plugin.getConfigManager().getConfig().getString(namePath, "");
         if (nameFormat != null) {
@@ -165,7 +179,6 @@ public class LandmarkMenu {
         List<Component> lore = new ArrayList<>();
         Location loc = landmark.getLocation();
 
-        // 添加分隔线
         lore.add(miniMessage.deserialize("<#c7a3ed><bold>﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍</bold>"));
 
         if (isUnlocked) {
@@ -174,7 +187,6 @@ public class LandmarkMenu {
             addLockedLore(lore, landmark);
         }
 
-        // 添加底部分隔线
         lore.add(miniMessage.deserialize("<#c7a3ed><bold>﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍﹍</bold>"));
 
         meta.lore(lore);
@@ -183,13 +195,13 @@ public class LandmarkMenu {
     }
 
     private void addUnlockedLore(List<Component> lore, Landmark landmark, Location loc) {
-        // 添加世界信息
-        String worldFormat = plugin.getConfigManager().getConfig().getString("gui.lore.world", "<aqua>世界: %world%</aqua>");
-        if (worldFormat != null && loc.getWorld() != null) {
-            lore.add(miniMessage.deserialize(worldFormat.replace("%world%", loc.getWorld().getName())));
+        if (loc.getWorld() != null) {
+            String worldFormat = plugin.getConfigManager().getConfig().getString("gui.lore.world", "<aqua>世界: %world%</aqua>");
+            if (worldFormat != null) {
+                lore.add(miniMessage.deserialize(worldFormat.replace("%world%", loc.getWorld().getName())));
+            }
         }
 
-        // 使用配置中的坐标格式
         String coordFormat = plugin.getConfigManager().getConfig().getString("gui.lore.coordinates",
                 "<gradient:aqua:blue>坐标: <white>X:%x% Y:%y% Z:%z%</gradient>");
         if (coordFormat != null) {
@@ -202,7 +214,6 @@ public class LandmarkMenu {
 
         lore.add(Component.empty());
 
-        // 使用配置中的描述格式
         String descFormat = plugin.getConfigManager().getConfig().getString("gui.lore.description",
                 "<gradient:green:aqua>描述: <white>%description%</gradient>");
         if (descFormat != null) {
@@ -212,7 +223,6 @@ public class LandmarkMenu {
 
         lore.add(Component.empty());
 
-        // 使用配置中的点击传送提示
         String teleportFormat = plugin.getConfigManager().getConfig().getString("gui.lore.click-teleport",
                 "<gradient:gold:yellow>✧ 点击传送 ✧</gradient>");
         if (teleportFormat != null) {
@@ -221,14 +231,12 @@ public class LandmarkMenu {
     }
 
     private void addLockedLore(List<Component> lore, Landmark landmark) {
-        // 显示世界信息（用问号代替）
         String worldFormat = plugin.getConfigManager().getConfig().getString("gui.lore.world",
                 "<#c7a3ed><bold>• 位置</bold> <gray><bold>???</bold>");
         if (worldFormat != null && landmark.getLocation().getWorld() != null) {
             lore.add(miniMessage.deserialize(worldFormat.replace("%world%", "???")));
         }
 
-        // 显示实际坐标
         Location loc = landmark.getLocation();
         String coordFormat = plugin.getConfigManager().getConfig().getString("gui.lore.coordinates",
                 "<#c7a3ed><bold>• 坐标</bold> <white><bold>%x% %y% %z%</bold>");
@@ -242,17 +250,14 @@ public class LandmarkMenu {
 
         lore.add(Component.empty());
 
-        // 描述显示为问号，不使用实际描述
         String descFormat = plugin.getConfigManager().getConfig().getString("gui.lore.description",
                 "<#c7a3ed><bold>• 描述</bold> <gray><bold>???</bold>");
         if (descFormat != null) {
-            // 直接使用 ??? 而不是替换变量
             lore.add(miniMessage.deserialize(descFormat.replace("%description%", "???")));
         }
 
         lore.add(Component.empty());
 
-        // 添加未解锁提示
         String lockedFormat = plugin.getConfigManager().getConfig().getString("gui.lore.locked",
                 "<gray><bold>该锚点尚未解封</bold>");
         if (lockedFormat != null) {
@@ -273,48 +278,38 @@ public class LandmarkMenu {
     }
 
     public static void handleClick(InventoryClickEvent event) {
-        if (!event.getView().title().equals(LandmarkPlugin.getInstance().getConfigManager()
-                .getMessage("gui.title", "<gold>锚点传送菜单</gold>"))) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+
+        LandmarkPlugin plugin = LandmarkPlugin.getInstance();
+        if (!event.getView().title().equals(plugin.getConfigManager().getMessage("gui.title", "<gold>锚点传送菜单</gold>"))) {
             return;
         }
 
         event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player)) {
-            return;
-        }
-
-        Player player = (Player) event.getWhoClicked();
         ItemStack clickedItem = event.getCurrentItem();
-
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
             return;
         }
 
         try {
             ItemMeta meta = clickedItem.getItemMeta();
-            if (meta == null || !meta.hasDisplayName()) {
+            if (meta == null) {
                 return;
             }
 
-            String displayName = PlainTextComponentSerializer.plainText()
-                    .serialize(meta.displayName());
+            PersistentDataContainer container = meta.getPersistentDataContainer();
+            String landmarkName = container.get(new NamespacedKey(plugin, LANDMARK_KEY), PersistentDataType.STRING);
 
-            // 提取锚点名称（移除所有格式代码和空格）
-            String landmarkName = displayName.replaceAll("§[0-9a-fk-or]", "")
-                    .replaceAll("[✦\\s]", "").trim();
-
-            if (!landmarkName.isEmpty()) {
-                LandmarkPlugin plugin = LandmarkPlugin.getInstance();
-                // 检查是否是已解锁的锚点
-                if (plugin.getLandmarkManager().isLandmarkUnlocked(player, landmarkName)) {
-                    plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
-                        player.closeInventory();
-                        plugin.getLandmarkManager().teleport(player, landmarkName);
-                    });
-                }
+            if (landmarkName != null && plugin.getLandmarkManager().isLandmarkUnlocked(player, landmarkName)) {
+                plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+                    player.closeInventory();
+                    plugin.getLandmarkManager().teleport(player, landmarkName);
+                });
             }
         } catch (Exception e) {
-            LandmarkPlugin.getInstance().getSLF4JLogger().error("GUI传送处理出错: {}", e.getMessage(), e);
+            plugin.getSLF4JLogger().error("GUI传送处理出错: {}", e.getMessage(), e);
         }
     }
 }
