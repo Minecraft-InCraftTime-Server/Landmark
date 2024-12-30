@@ -242,11 +242,12 @@ public class LandmarkMenu {
 
         lore.add(Component.empty());
 
-        // 描述显示为问号
+        // 描述显示为问号，不使用实际描述
         String descFormat = plugin.getConfigManager().getConfig().getString("gui.lore.description",
                 "<#c7a3ed><bold>• 描述</bold> <gray><bold>???</bold>");
         if (descFormat != null) {
-            lore.add(miniMessage.deserialize(descFormat));
+            // 直接使用 ??? 而不是替换变量
+            lore.add(miniMessage.deserialize(descFormat.replace("%description%", "???")));
         }
 
         lore.add(Component.empty());
