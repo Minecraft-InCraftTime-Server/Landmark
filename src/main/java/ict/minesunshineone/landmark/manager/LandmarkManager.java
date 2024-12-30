@@ -53,8 +53,6 @@ public class LandmarkManager {
         try {
             // 创建锚点并保存
             Landmark landmark = new Landmark(name, location, description);
-            // 设置顺序为当前锚点数量
-            landmark.setOrder(landmarks.size());
             landmarks.put(name.toLowerCase(), landmark);
 
             // 使用统一的方法创建实体
@@ -192,7 +190,6 @@ public class LandmarkManager {
                             if (location != null && location.getWorld() != null) {
                                 String description = landmarkSection.getString("description", "暂无描述");
                                 Landmark landmark = new Landmark(key, location, description);
-                                landmark.setOrder(landmarkSection.getInt("order", 0));
                                 landmarks.put(key.toLowerCase(), landmark);
 
                                 // 延迟创建实体，确保世界加载完成
@@ -332,7 +329,6 @@ public class LandmarkManager {
 
         landmarks.forEach((name, landmark) -> {
             ConfigurationSection section = landmarksSection.createSection(name);
-            section.set("order", landmark.getOrder());
             section.set("location", landmark.getLocation());
             section.set("description", landmark.getDescription());
             section.set("interaction_entity_id", landmark.getInteractionEntityId() != null
