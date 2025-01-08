@@ -21,7 +21,7 @@
 
 ## 📦 安装
 
-1. 从 [Releases](https://github.com/MineSunshineOne/LandmarkSystem/releases) 下载最新版本
+1. 从 [Releases](https://github.com/MineSunshineOne/Landmark/releases) 下载最新版本
 2. 将插件放入服务器的 `plugins` 文件夹
 3. 重启服务器或使用 `/reload confirm` 重载插件
 4. 插件将自动生成配置文件
@@ -127,7 +127,7 @@ particles:
 
 如果您在使用过程中遇到任何问题，欢迎通过以下方式反馈：
 
-1. 在 [GitHub Issues](https://github.com/MineSunshineOne/LandmarkSystem/issues) 提交问题
+1. 在 [GitHub Issues](https://github.com/MineSunshineOne/Landmark/issues) 提交问题
 2. 加入我们的交流群：[QQ群号]
 
 ## 📄 开源协议

@@ -36,4 +36,7 @@ permissions:
     default: true
   landmark.interact:
     description: 允许与锚点展示实体交互
-    default: true 
+    default: true
+  landmark.admin:
+    description: 管理员权限
+    default: op 
