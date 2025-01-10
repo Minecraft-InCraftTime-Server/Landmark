@@ -2,8 +2,6 @@ package ict.minesunshineone.landmark.manager;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -51,18 +49,23 @@ public class LandmarkManager {
         }
 
         try {
+            // 处理描述中的换行符
+            String formattedDescription = description != null
+                    ? description.replace("\\n", "\n").replace("\\\\n", "\n")
+                    : "暂无描述";
+
             // 计算新锚点的菜单位置
             int[] menuPosition = calculateNextMenuPosition();
 
             // 创建锚点并保存
-            Landmark landmark = new Landmark(name, location, description, menuPosition[0], menuPosition[1]);
+            Landmark landmark = new Landmark(name, location, formattedDescription, menuPosition[0], menuPosition[1]);
             landmarks.put(name.toLowerCase(), landmark);
 
             // 使用统一的方法创建实体
             createLandmarkEntities(landmark);
 
             plugin.getSLF4JLogger().info("成功创建锚点展示实体: {}", name);
-            saveLandmarkData();
+            saveData();
         } catch (IllegalArgumentException | IllegalStateException e) {
             plugin.getSLF4JLogger().error("创建锚点时发生错误: {}", e.getMessage());
             landmarks.remove(name.toLowerCase());
@@ -128,7 +131,7 @@ public class LandmarkManager {
             }
 
             // 保存更新后的数据
-            saveLandmarkData();
+            saveData();
 
             // 保存所有受影响的玩家数据
             for (UUID playerId : unlockedLandmarks.keySet()) {
@@ -254,8 +257,6 @@ public class LandmarkManager {
                     }
                 }
 
-                // 加载完所有锚点后，验证并修复菜单位置
-                validateAndFixMenuPositions();
             }
         }
 
@@ -357,7 +358,7 @@ public class LandmarkManager {
             landmark.setMenuColumn(oldColumn);
 
             // 保存更新后的数据
-            saveLandmarkData();
+            saveData();
 
             // 保存所有受影响的玩家数据
             for (UUID playerId : unlockedLandmarks.keySet()) {
@@ -389,52 +390,6 @@ public class LandmarkManager {
             playerData.save(playerFile);
         } catch (IOException e) {
             plugin.getSLF4JLogger().error("无法保存玩家数据 {}: {}", playerId, e.getMessage());
-        }
-    }
-
-    private void saveLandmarkData() {
-        File dataFile = new File(plugin.getDataFolder(), plugin.getConfigManager().getDataFileName());
-        File backupFile = new File(plugin.getDataFolder(), plugin.getConfigManager().getDataFileName() + ".backup");
-
-        // 创建备份
-        if (dataFile.exists()) {
-            try {
-                Files.copy(dataFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                plugin.getSLF4JLogger().error("无法创建数据备份: {}", e.getMessage());
-            }
-        }
-
-        YamlConfiguration data = new YamlConfiguration();
-        ConfigurationSection landmarksSection = data.createSection("landmarks");
-
-        landmarks.forEach((name, landmark) -> {
-            ConfigurationSection section = landmarksSection.createSection(name);
-            section.set("location", landmark.getLocation());
-            section.set("description", landmark.getDescription());
-            section.set("interaction_entity_id", landmark.getInteractionEntityId() != null
-                    ? landmark.getInteractionEntityId().toString() : null);
-            section.set("menu_row", landmark.getMenuRow());
-            section.set("menu_column", landmark.getMenuColumn());
-        });
-
-        try {
-            data.save(dataFile);
-            // 保存成功后删除备份
-            if (backupFile.exists()) {
-                backupFile.delete();
-            }
-        } catch (IOException e) {
-            plugin.getSLF4JLogger().error("无法保存锚点数据: {}", e.getMessage());
-            // 恢复备份
-            if (backupFile.exists()) {
-                try {
-                    Files.copy(backupFile.toPath(), dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    plugin.getSLF4JLogger().info("恢复数据备份");
-                } catch (IOException ex) {
-                    plugin.getSLF4JLogger().error("无法恢复数据备份: {}", ex.getMessage());
-                }
-            }
         }
     }
 
@@ -503,7 +458,7 @@ public class LandmarkManager {
             });
 
             landmark.setInteractionEntityId(interaction.getUniqueId());
-            saveLandmarkData(); // 保存实体ID
+            saveData(); // 保存实体ID
         } catch (IllegalArgumentException | IllegalStateException e) {
             plugin.getSLF4JLogger().error("重建锚点实体时发生错误: {}", e.getMessage());
         }
@@ -536,46 +491,8 @@ public class LandmarkManager {
             if (newRow >= 1 && newRow <= 3 && newColumn >= 1 && newColumn <= 7) {
                 landmark.setMenuRow(newRow);
                 landmark.setMenuColumn(newColumn);
-                saveLandmarkData();
+                saveData();
             }
         }
     }
-
-    private void validateAndFixMenuPositions() {
-        boolean[][] occupied = new boolean[4][9];
-        Map<String, int[]> newPositions = new HashMap<>();
-
-        // 第一遍：检查所有位置的有效性
-        for (Map.Entry<String, Landmark> entry : landmarks.entrySet()) {
-            Landmark landmark = entry.getValue();
-            int row = landmark.getMenuRow();
-            int col = landmark.getMenuColumn();
-
-            // 如果位置无效或已被占用，标记需要重新分配
-            if (row < 1 || row > 3 || col < 1 || col > 7 || occupied[row][col]) {
-                newPositions.put(entry.getKey(), calculateNextMenuPosition());
-            } else {
-                occupied[row][col] = true;
-            }
-        }
-
-        // 第二遍：应用新位置
-        for (Map.Entry<String, int[]> entry : newPositions.entrySet()) {
-            Landmark landmark = landmarks.get(entry.getKey());
-            if (landmark != null) {
-                int[] pos = entry.getValue();
-                landmark.setMenuRow(pos[0]);
-                landmark.setMenuColumn(pos[1]);
-                plugin.getSLF4JLogger().info("修复锚点 {} 的菜单位置为 ({}, {})",
-                        landmark.getName(), pos[0], pos[1]);
-            }
-        }
-
-        // 如果有修复，保存更新
-        if (!newPositions.isEmpty()) {
-            saveLandmarkData();
-        }
-    }
-
-    // 其他方法...
 }
