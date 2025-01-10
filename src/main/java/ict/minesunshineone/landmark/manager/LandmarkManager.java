@@ -110,12 +110,8 @@ public class LandmarkManager {
         if (landmark != null) {
             // 移除交互实体
             if (landmark.getInteractionEntityId() != null) {
-                // 获取实体所在的区块并确保它被加载
                 Location loc = landmark.getLocation();
                 if (loc != null && loc.getWorld() != null) {
-                    // 确保区块被加载
-                    loc.getChunk().load();
-
                     // 移除交互实体
                     Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
                     if (entity != null) {

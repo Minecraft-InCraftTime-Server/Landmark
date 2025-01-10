@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 
 import ict.minesunshineone.landmark.LandmarkPlugin;
@@ -30,10 +31,17 @@ public class DeleteCommand extends SubCommand {
             return;
         }
 
-        plugin.getLandmarkManager().deleteLandmark(name);
-        plugin.getConfigManager().sendMessage(sender, "delete-success",
-                "<green>成功删除锚点 <gold><name></gold>！</green>",
-                "<name>", name);
+        // 获取锚点位置
+        Location location = plugin.getLandmarkManager().getLandmarks().get(name.toLowerCase()).getLocation();
+        if (location != null && location.getWorld() != null) {
+            // 在锚点所在区域执行删除操作
+            plugin.getServer().getRegionScheduler().execute(plugin, location, () -> {
+                plugin.getLandmarkManager().deleteLandmark(name);
+                plugin.getConfigManager().sendMessage(sender, "delete-success",
+                        "<green>成功删除锚点 <gold><name></gold>！</green>",
+                        "<name>", name);
+            });
+        }
     }
 
     @Override
