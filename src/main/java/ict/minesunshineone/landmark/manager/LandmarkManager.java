@@ -49,16 +49,11 @@ public class LandmarkManager {
         }
 
         try {
-            // 处理描述中的换行符
-            String formattedDescription = description != null
-                    ? description.replace("\\n", "\n").replace("\\\\n", "\n")
-                    : "暂无描述";
-
             // 计算新锚点的菜单位置
             int[] menuPosition = calculateNextMenuPosition();
 
             // 创建锚点并保存
-            Landmark landmark = new Landmark(name, location, formattedDescription, menuPosition[0], menuPosition[1]);
+            Landmark landmark = new Landmark(name, location, description, menuPosition[0], menuPosition[1]);
             landmarks.put(name.toLowerCase(), landmark);
 
             // 使用统一的方法创建实体
@@ -115,9 +110,23 @@ public class LandmarkManager {
         if (landmark != null) {
             // 移除交互实体
             if (landmark.getInteractionEntityId() != null) {
-                Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
-                if (entity != null) {
-                    entity.remove();
+                // 获取实体所在的区块并确保它被加载
+                Location loc = landmark.getLocation();
+                if (loc != null && loc.getWorld() != null) {
+                    // 确保区块被加载
+                    loc.getChunk().load();
+
+                    // 移除交互实体
+                    Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
+                    if (entity != null) {
+                        entity.remove();
+                    }
+
+                    // 移除同位置的所有具有相同名称的交互实体
+                    loc.getWorld().getNearbyEntities(loc, 2, 2, 2).stream()
+                            .filter(e -> e instanceof Interaction)
+                            .filter(e -> e.customName() != null && e.customName().equals(Component.text("§e[点击打开]")))
+                            .forEach(Entity::remove);
                 }
                 landmark.setInteractionEntityId(null);
             }

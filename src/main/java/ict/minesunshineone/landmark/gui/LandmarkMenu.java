@@ -217,8 +217,19 @@ public class LandmarkMenu {
         String descFormat = plugin.getConfigManager().getConfig().getString("gui.lore.description",
                 "<gradient:green:aqua>描述: <white>%description%</gradient>");
         if (descFormat != null) {
-            String formatted = descFormat.replace("%description%", landmark.getDescription());
-            lore.add(miniMessage.deserialize(formatted));
+            String[] descriptionLines = landmark.getDescription().split("\n");
+            if (descriptionLines.length == 1) {
+                // 单行文本直接显示
+                String formatted = descFormat.replace("%description%", descriptionLines[0].trim());
+                lore.add(miniMessage.deserialize(formatted));
+            } else if (descriptionLines.length > 1) {
+                // 多行文本先显示"描述:"，然后每行单独显示
+                String formatted = descFormat.replace("%description%", "");  // 使用相同格式，但不显示描述内容
+                lore.add(miniMessage.deserialize(formatted));
+                for (String line : descriptionLines) {
+                    lore.add(miniMessage.deserialize("<white><bold>  " + line.trim() + "</bold></white>"));  // 添加4个空格作为缩进
+                }
+            }
         }
 
         lore.add(Component.empty());
