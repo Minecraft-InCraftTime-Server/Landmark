@@ -451,9 +451,9 @@ public class LandmarkManager {
             centerLoc.setZ(location.getBlockZ() + 0.5);
 
             // 创建交互实体
-            Location interactLoc = centerLoc.clone().add(0, 0.5, 0);
+            Location interactLoc = centerLoc.clone().add(0, 0, 0);
             Interaction interaction = location.getWorld().spawn(interactLoc, Interaction.class, entity -> {
-                entity.setInteractionWidth(1.5f);
+                entity.setInteractionWidth(3.5f);
                 entity.setInteractionHeight(2.0f);
                 entity.setPersistent(true);
                 entity.setInvulnerable(true);
