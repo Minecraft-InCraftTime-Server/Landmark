@@ -10,11 +10,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -318,25 +315,6 @@ public class LandmarkMenu implements InventoryHolder, Listener {
                 player.closeInventory();
                 plugin.getLandmarkManager().teleport(player, landmarkName);
             });
-        }
-    }
-
-    // 添加关闭菜单时的清理方法
-    private void cleanup() {
-        // 清理物品栏内容
-        if (inventory != null) {
-            inventory.clear();
-        }
-
-        // 注销事件监听器
-        HandlerList.unregisterAll(this);
-    }
-
-    // 监听菜单关闭事件
-    @EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (event.getInventory().equals(inventory)) {
-            cleanup();
         }
     }
 }
