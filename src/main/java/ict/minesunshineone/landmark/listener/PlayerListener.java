@@ -14,6 +14,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
@@ -21,6 +22,7 @@ import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.InventoryHolder;
 
 import ict.minesunshineone.landmark.LandmarkPlugin;
 import ict.minesunshineone.landmark.gui.LandmarkMenu;
@@ -38,9 +40,18 @@ public class PlayerListener implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        LandmarkMenu.handleClick(event);
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onClickMenu(InventoryClickEvent event) {
+        if (event.getClickedInventory() == null) {
+            return;
+        }
+
+        InventoryHolder holder = event.getView().getTopInventory().getHolder();
+        if (!(holder instanceof LandmarkMenu menu)) {
+            return;
+        }
+
+        menu.onClick(event.getSlot(), event);
     }
 
     @EventHandler

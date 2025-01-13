@@ -16,6 +16,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -26,12 +27,12 @@ import ict.minesunshineone.landmark.model.Landmark;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-public class LandmarkMenu implements Listener {
+public class LandmarkMenu implements InventoryHolder, Listener {
 
     private static final String LANDMARK_KEY = "landmark_name";
     private final LandmarkPlugin plugin;
     private final Player player;
-    private final Inventory inventory;
+    private Inventory inventory;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final NamespacedKey landmarkKey;
 
@@ -39,11 +40,19 @@ public class LandmarkMenu implements Listener {
         this.plugin = plugin;
         this.player = player;
         this.landmarkKey = new NamespacedKey(plugin, LANDMARK_KEY);
+    }
+
+    @Override
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public void open() {
         Component title = plugin.getConfigManager().getMessage("gui.title", "<gold>锚点传送菜单</gold>");
         int size = plugin.getConfigManager().getConfig().getInt("gui.size", 54);
-        this.inventory = Bukkit.createInventory(null, size, title);
-
+        this.inventory = Bukkit.createInventory(this, size, title);
         initializeItems();
+        player.openInventory(inventory);
     }
 
     private void initializeItems() {
@@ -281,28 +290,7 @@ public class LandmarkMenu implements Listener {
         }
     }
 
-    private void updateMenu() {
-        inventory.clear();
-        initializeItems();
-    }
-
-    public void open() {
-        // 在打开菜单时注册监听器并更新内容
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        updateMenu();
-        player.openInventory(inventory);
-    }
-
-    public static void handleClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)) {
-            return;
-        }
-
-        LandmarkPlugin plugin = LandmarkPlugin.getInstance();
-        if (!event.getView().title().equals(plugin.getConfigManager().getMessage("gui.title", "<gold>锚点传送菜单</gold>"))) {
-            return;
-        }
-
+    public void onClick(int slot, InventoryClickEvent event) {
         event.setCancelled(true);
         ItemStack clickedItem = event.getCurrentItem();
         if (clickedItem == null || clickedItem.getType() == Material.AIR) {
@@ -310,25 +298,26 @@ public class LandmarkMenu implements Listener {
         }
 
         try {
-            ItemMeta meta = clickedItem.getItemMeta();
-            if (meta == null) {
-                return;
-            }
-
-            PersistentDataContainer container = meta.getPersistentDataContainer();
-            String landmarkName = container.get(new NamespacedKey(plugin, LANDMARK_KEY), PersistentDataType.STRING);
-
-            if (landmarkName != null && plugin.getLandmarkManager().isLandmarkUnlocked(player, landmarkName)) {
-                plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
-                    if (event.getInventory().getHolder() instanceof LandmarkMenu menu) {
-                        menu.cleanup();
-                    }
-                    player.closeInventory();
-                    plugin.getLandmarkManager().teleport(player, landmarkName);
-                });
-            }
+            handleItemClick(clickedItem, (Player) event.getWhoClicked());
         } catch (Exception e) {
             plugin.getSLF4JLogger().error("GUI传送处理出错: {}", e.getMessage(), e);
+        }
+    }
+
+    private void handleItemClick(ItemStack item, Player player) {
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+
+        PersistentDataContainer container = meta.getPersistentDataContainer();
+        String landmarkName = container.get(landmarkKey, PersistentDataType.STRING);
+
+        if (landmarkName != null && plugin.getLandmarkManager().isLandmarkUnlocked(player, landmarkName)) {
+            plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+                player.closeInventory();
+                plugin.getLandmarkManager().teleport(player, landmarkName);
+            });
         }
     }
 
