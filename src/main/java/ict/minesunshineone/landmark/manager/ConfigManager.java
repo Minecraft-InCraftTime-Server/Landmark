@@ -2,6 +2,8 @@ package ict.minesunshineone.landmark.manager;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.bukkit.Sound;
 import org.bukkit.command.CommandSender;
@@ -10,7 +12,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import ict.minesunshineone.landmark.LandmarkPlugin;
-
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -168,5 +169,27 @@ public class ConfigManager {
         Component title = getMessage(titlePath, "");
         Component subtitle = getMessage(subtitlePath, "");
         player.showTitle(Title.title(title, subtitle));
+    }
+
+    public List<Component> getMultilineMessage(String path, String defaultValue, Object... replacements) {
+        List<Component> components = new ArrayList<>();
+        String text = config.getString(path, defaultValue);
+        if (text != null) {
+            for (String line : text.split("\n")) {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    // 替换变量
+                    if (replacements != null && replacements.length >= 2) {
+                        for (int i = 0; i < replacements.length - 1; i += 2) {
+                            String key = String.valueOf(replacements[i]);
+                            String value = String.valueOf(replacements[i + 1]);
+                            trimmed = trimmed.replace(key, value);
+                        }
+                    }
+                    components.add(miniMessage.deserialize(trimmed));
+                }
+            }
+        }
+        return components;
     }
 }

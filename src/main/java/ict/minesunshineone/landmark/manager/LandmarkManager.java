@@ -2,8 +2,6 @@ package ict.minesunshineone.landmark.manager;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,7 +21,6 @@ import org.bukkit.entity.Player;
 
 import ict.minesunshineone.landmark.LandmarkPlugin;
 import ict.minesunshineone.landmark.model.Landmark;
-
 import net.kyori.adventure.text.Component;
 
 public class LandmarkManager {
@@ -52,19 +49,59 @@ public class LandmarkManager {
         }
 
         try {
+            // 计算新锚点的菜单位置
+            int[] menuPosition = calculateNextMenuPosition();
+
             // 创建锚点并保存
-            Landmark landmark = new Landmark(name, location, description);
+            Landmark landmark = new Landmark(name, location, description, menuPosition[0], menuPosition[1]);
             landmarks.put(name.toLowerCase(), landmark);
 
             // 使用统一的方法创建实体
             createLandmarkEntities(landmark);
 
             plugin.getSLF4JLogger().info("成功创建锚点展示实体: {}", name);
-            saveLandmarkData();
+            saveData();
         } catch (IllegalArgumentException | IllegalStateException e) {
             plugin.getSLF4JLogger().error("创建锚点时发生错误: {}", e.getMessage());
             landmarks.remove(name.toLowerCase());
         }
+    }
+
+    private int[] calculateNextMenuPosition() {
+        int maxRow = 1;  // 从第二行开始（索引1）
+        int maxCol = 1;  // 从第一列开始（索引1）
+        boolean[][] occupied = new boolean[4][9]; // 4行9列的网格，实际使用1-3行，1-7列
+
+        // 标记已占用的位置
+        for (Landmark landmark : landmarks.values()) {
+            int row = landmark.getMenuRow();
+            int col = landmark.getMenuColumn();
+            if (row >= 1 && row <= 3 && col >= 1 && col <= 7) {  // 修改范围：第2-4行（索引1-3），第1-7列
+                occupied[row][col] = true;
+                maxRow = Math.max(maxRow, row);
+                maxCol = Math.max(maxCol, col);
+            }
+        }
+
+        // 寻找下一个可用位置（从第二行到第四行，第一列到第七列）
+        for (int row = 1; row <= 3; row++) {
+            for (int col = 1; col <= 7; col++) {
+                if (!occupied[row][col]) {
+                    return new int[]{row, col};
+                }
+            }
+        }
+
+        // 如果当前行未满，添加到当前行的下一个位置
+        if (maxCol < 7) {
+            return new int[]{maxRow, maxCol + 1};
+        }
+        // 如果需要新的一行（最多到第3行，对应实际的第4行）
+        if (maxRow < 3) {
+            return new int[]{maxRow + 1, 1};  // 新行从第一列开始
+        }
+        // 如果菜单已满，返回默认位置（第1行第1列，对应实际的第2行第1列）
+        return new int[]{1, 1};
     }
 
     public void deleteLandmark(String name) {
@@ -73,9 +110,19 @@ public class LandmarkManager {
         if (landmark != null) {
             // 移除交互实体
             if (landmark.getInteractionEntityId() != null) {
-                Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
-                if (entity != null) {
-                    entity.remove();
+                Location loc = landmark.getLocation();
+                if (loc != null && loc.getWorld() != null) {
+                    // 移除交互实体
+                    Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
+                    if (entity != null) {
+                        entity.remove();
+                    }
+
+                    // 移除同位置的所有具有相同名称的交互实体
+                    loc.getWorld().getNearbyEntities(loc, 2, 2, 2).stream()
+                            .filter(e -> e instanceof Interaction)
+                            .filter(e -> e.customName() != null && e.customName().equals(Component.text("§e[点击打开]")))
+                            .forEach(Entity::remove);
                 }
                 landmark.setInteractionEntityId(null);
             }
@@ -89,7 +136,7 @@ public class LandmarkManager {
             }
 
             // 保存更新后的数据
-            saveLandmarkData();
+            saveData();
 
             // 保存所有受影响的玩家数据
             for (UUID playerId : unlockedLandmarks.keySet()) {
@@ -116,14 +163,21 @@ public class LandmarkManager {
     }
 
     public void teleport(Player player, String landmarkName) {
-        Landmark targetLandmark = landmarks.get(landmarkName.toLowerCase());
+        // 规范化名称处理
+        String normalizedName = landmarkName.toLowerCase().trim();
+
+        // 检查锚点是否存在
+        Landmark targetLandmark = landmarks.get(normalizedName);
         if (targetLandmark == null) {
-            plugin.getConfigManager().sendMessage(player, "landmark-not-exist", "");
+            plugin.getConfigManager().sendMessage(player, "landmark-not-exist",
+                    "<red>该锚点不存在！</red>");
             return;
         }
 
-        if (!isLandmarkUnlocked(player, landmarkName)) {
-            plugin.getConfigManager().sendMessage(player, "landmark-not-unlocked", "");
+        // 检查是否已解锁
+        if (!isLandmarkUnlocked(player, normalizedName)) {
+            plugin.getConfigManager().sendMessage(player, "landmark-not-unlocked",
+                    "<red>你需要先解锁该锚点！</red>");
             return;
         }
 
@@ -156,6 +210,7 @@ public class LandmarkManager {
             return;
         }
 
+        // 执行传送
         plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
             player.teleportAsync(targetLandmark.getLocation()).thenAccept(result -> {
                 if (result) {
@@ -182,7 +237,16 @@ public class LandmarkManager {
                             Location location = landmarkSection.getLocation("location");
                             if (location != null && location.getWorld() != null) {
                                 String description = landmarkSection.getString("description", "暂无描述");
-                                Landmark landmark = new Landmark(key, location, description);
+                                // 修改默认值：行从1开始，列从1开始
+                                int menuRow = landmarkSection.getInt("menu_row", 1);
+                                int menuColumn = landmarkSection.getInt("menu_column", 1);
+
+                                Landmark landmark = new Landmark(key, location, description, menuRow, menuColumn);
+                                String interactionId = landmarkSection.getString("interaction_entity_id");
+                                if (interactionId != null) {
+                                    landmark.setInteractionEntityId(UUID.fromString(interactionId));
+                                }
+
                                 landmarks.put(key.toLowerCase(), landmark);
 
                                 // 延迟创建实体，确保世界加载完成
@@ -190,17 +254,22 @@ public class LandmarkManager {
                                     if (location.getWorld() != null && location.getChunk().isLoaded()) {
                                         createLandmarkEntities(landmark);
                                     }
-                                }, 100L); // 延迟5秒
+                                }, 100L);
                             }
                         } catch (IllegalArgumentException | IllegalStateException e) {
                             plugin.getSLF4JLogger().error("加载锚点 {} 时发生错误: {}", key, e.getMessage());
                         }
                     }
                 }
+
             }
         }
 
         // 加载玩家数据
+        loadPlayerData();
+    }
+
+    private void loadPlayerData() {
         File playerDataFolder = new File(plugin.getDataFolder(), "player_data");
         if (!playerDataFolder.exists()) {
             playerDataFolder.mkdirs();
@@ -229,6 +298,8 @@ public class LandmarkManager {
             landmarkSection.set("description", landmark.getDescription());
             landmarkSection.set("interaction_entity_id", landmark.getInteractionEntityId() != null
                     ? landmark.getInteractionEntityId().toString() : null);
+            landmarkSection.set("menu_row", landmark.getMenuRow());
+            landmarkSection.set("menu_column", landmark.getMenuColumn());
         }
         try {
             data.save(dataFile);
@@ -263,18 +334,41 @@ public class LandmarkManager {
     }
 
     public void renameLandmark(String oldName, String newName) {
-        Landmark landmark = landmarks.remove(oldName.toLowerCase());
+        String lowerOldName = oldName.toLowerCase();
+        String lowerNewName = newName.toLowerCase();
+
+        // 检查新名称是否已存在
+        if (landmarks.containsKey(lowerNewName)) {
+            return;
+        }
+
+        Landmark landmark = landmarks.remove(lowerOldName);
         if (landmark != null) {
+            // 保持原有的菜单位置
+            int oldRow = landmark.getMenuRow();
+            int oldColumn = landmark.getMenuColumn();
+
             landmark.setName(newName);
-            landmarks.put(newName.toLowerCase(), landmark);
+            landmarks.put(lowerNewName, landmark);
 
             // 更新所有玩家的解锁列表
             for (Set<String> unlockedSet : unlockedLandmarks.values()) {
-                if (unlockedSet.remove(oldName.toLowerCase())) {
-                    unlockedSet.add(newName.toLowerCase());
+                if (unlockedSet.remove(lowerOldName)) {
+                    unlockedSet.add(lowerNewName);
                 }
             }
+
+            // 确保位置信息不变
+            landmark.setMenuRow(oldRow);
+            landmark.setMenuColumn(oldColumn);
+
+            // 保存更新后的数据
             saveData();
+
+            // 保存所有受影响的玩家数据
+            for (UUID playerId : unlockedLandmarks.keySet()) {
+                savePlayerData(playerId);
+            }
         }
     }
 
@@ -301,50 +395,6 @@ public class LandmarkManager {
             playerData.save(playerFile);
         } catch (IOException e) {
             plugin.getSLF4JLogger().error("无法保存玩家数据 {}: {}", playerId, e.getMessage());
-        }
-    }
-
-    private void saveLandmarkData() {
-        File dataFile = new File(plugin.getDataFolder(), plugin.getConfigManager().getDataFileName());
-        File backupFile = new File(plugin.getDataFolder(), plugin.getConfigManager().getDataFileName() + ".backup");
-
-        // 创建备份
-        if (dataFile.exists()) {
-            try {
-                Files.copy(dataFile.toPath(), backupFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                plugin.getSLF4JLogger().error("无法创建数据备份: {}", e.getMessage());
-            }
-        }
-
-        YamlConfiguration data = new YamlConfiguration();
-        ConfigurationSection landmarksSection = data.createSection("landmarks");
-
-        landmarks.forEach((name, landmark) -> {
-            ConfigurationSection section = landmarksSection.createSection(name);
-            section.set("location", landmark.getLocation());
-            section.set("description", landmark.getDescription());
-            section.set("interaction_entity_id", landmark.getInteractionEntityId() != null
-                    ? landmark.getInteractionEntityId().toString() : null);
-        });
-
-        try {
-            data.save(dataFile);
-            // 保存成功后删除备份
-            if (backupFile.exists()) {
-                backupFile.delete();
-            }
-        } catch (IOException e) {
-            plugin.getSLF4JLogger().error("无法保存锚点数据: {}", e.getMessage());
-            // 恢复备份
-            if (backupFile.exists()) {
-                try {
-                    Files.copy(backupFile.toPath(), dataFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    plugin.getSLF4JLogger().info("恢复数据备份");
-                } catch (IOException ex) {
-                    plugin.getSLF4JLogger().error("无法恢复数据备份: {}", ex.getMessage());
-                }
-            }
         }
     }
 
@@ -401,9 +451,9 @@ public class LandmarkManager {
             centerLoc.setZ(location.getBlockZ() + 0.5);
 
             // 创建交互实体
-            Location interactLoc = centerLoc.clone().add(0, 0.5, 0);
+            Location interactLoc = centerLoc.clone().add(0, 0, 0);
             Interaction interaction = location.getWorld().spawn(interactLoc, Interaction.class, entity -> {
-                entity.setInteractionWidth(1.5f);
+                entity.setInteractionWidth(3.5f);
                 entity.setInteractionHeight(2.0f);
                 entity.setPersistent(true);
                 entity.setInvulnerable(true);
@@ -413,31 +463,51 @@ public class LandmarkManager {
             });
 
             landmark.setInteractionEntityId(interaction.getUniqueId());
-            saveLandmarkData(); // 保存实体ID
+            saveData(); // 保存实体ID
         } catch (IllegalArgumentException | IllegalStateException e) {
             plugin.getSLF4JLogger().error("重建锚点实体时发生错误: {}", e.getMessage());
         }
     }
 
     public void cleanup() {
+        // 清理所有实体
         for (Landmark landmark : landmarks.values()) {
-            // 清理展示实体
-            if (landmark.getDisplayEntityId() != null) {
-                Entity entity = Bukkit.getEntity(landmark.getDisplayEntityId());
-                if (entity != null) {
-                    entity.remove();
-                }
-            }
+            removeLandmarkEntities(landmark);
+        }
 
-            // 清理交互实体
-            if (landmark.getInteractionEntityId() != null) {
-                Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
-                if (entity != null) {
-                    entity.remove();
-                }
+        // 清理数据结构
+        landmarks.clear();
+        unlockedLandmarks.clear();
+        cooldowns.clear();
+    }
+
+    private void removeLandmarkEntities(Landmark landmark) {
+        if (landmark.getDisplayEntityId() != null) {
+            Entity entity = Bukkit.getEntity(landmark.getDisplayEntityId());
+            if (entity != null) {
+                entity.remove();
             }
+            landmark.setDisplayEntityId(null);
+        }
+
+        if (landmark.getInteractionEntityId() != null) {
+            Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
+            if (entity != null) {
+                entity.remove();
+            }
+            landmark.setInteractionEntityId(null);
         }
     }
 
-    // 其他方法...
+    public void updateMenuPosition(String landmarkName, int newRow, int newColumn) {
+        Landmark landmark = landmarks.get(landmarkName.toLowerCase());
+        if (landmark != null) {
+            // 确保位置在有效范围内（第2-4行，即索引1-3，列1-7）
+            if (newRow >= 1 && newRow <= 3 && newColumn >= 1 && newColumn <= 7) {
+                landmark.setMenuRow(newRow);
+                landmark.setMenuColumn(newColumn);
+                saveData();
+            }
+        }
+    }
 }

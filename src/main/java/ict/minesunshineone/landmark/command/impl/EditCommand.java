@@ -20,12 +20,12 @@ public class EditCommand extends SubCommand {
     public void execute(CommandSender sender, String[] args) {
         if (args.length < 2) {
             plugin.getConfigManager().sendMessage(sender, "command-usage", "<red>用法: <usage></red>",
-                    "<usage>", "/landmark edit <锚点名> <新描述>");
+                    "<usage>", "/landmark edit <锚点名> <第一行描述> [第二行描述] [第三行描述]...");
             return;
         }
 
         String landmarkName = args[0];
-        String newDescription = String.join(" ", Arrays.copyOfRange(args, 1, args.length));
+        String newDescription = String.join("\n", Arrays.copyOfRange(args, 1, args.length));
 
         plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
             if (!plugin.getLandmarkManager().getLandmarks().containsKey(landmarkName.toLowerCase())) {

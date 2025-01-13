@@ -93,16 +93,35 @@ public class LandmarkCommand implements CommandExecutor, TabCompleter {
     private void showHelp(CommandSender sender) {
         sender.sendMessage(plugin.getConfigManager().getMessage("help.separator", "<gold>================================</gold>"));
 
-        for (String cmd : Arrays.asList(
-                "/landmark create <名称> [描述]",
-                "/landmark teleport <名称>",
-                "/landmark menu",
-                "/landmark delete <名称>",
-                "/landmark rename <旧名称> <新名称>",
-                "/landmark edit <名称> <描述>")) {
+        // 基础命令（所有玩家都能看到）
+        String[] basicCommands = {
+            "/landmark teleport <名称>",
+            "/landmark menu"
+        };
+
+        // 管理命令（只有管理员能看到）
+        String[] adminCommands = {
+            "/landmark create <名称> [描述]",
+            "/landmark delete <名称>",
+            "/landmark rename <旧名称> <新名称>",
+            "/landmark edit <名称> <描述>",
+            "/landmark reload"
+        };
+
+        // 显示基础命令
+        for (String cmd : basicCommands) {
             sender.sendMessage(plugin.getConfigManager().getMessage("help.command",
-                    "<gold>[锚点系统]</gold> <yellow>%command%</yellow> <gray>- %description%</gray>",
+                    "<gold>[锚点系统]</gold> <yellow>%command%</yellow>",
                     "%command%", cmd));
+        }
+
+        // 如果有管理员权限，显示管理命令
+        if (sender.hasPermission("landmark.admin")) {
+            for (String cmd : adminCommands) {
+                sender.sendMessage(plugin.getConfigManager().getMessage("help.command",
+                        "<gold>[锚点系统]</gold> <yellow>%command%</yellow>",
+                        "%command%", cmd));
+            }
         }
     }
 }

@@ -25,13 +25,13 @@ public class CreateCommand extends SubCommand {
 
         if (args.length < 1) {
             plugin.getConfigManager().sendMessage(sender, "command-usage", "<red>用法: <usage></red>",
-                    "<usage>", "/landmark create <名称> [描述]");
+                    "<usage>", "/landmark create <名称> [第一行描述] [第二行描述] [第三行描述]...");
             return;
         }
 
         Player player = (Player) sender;
         String name = args[0];
-        String description = args.length > 1 ? String.join(" ", Arrays.copyOfRange(args, 1, args.length)) : "暂无描述";
+        String description = args.length > 1 ? String.join("\n", Arrays.copyOfRange(args, 1, args.length)) : "暂无描述";
 
         plugin.getServer().getRegionScheduler().execute(plugin, player.getLocation(), () -> {
             if (plugin.getLandmarkManager().getLandmarks().containsKey(name.toLowerCase())) {
