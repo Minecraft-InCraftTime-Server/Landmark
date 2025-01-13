@@ -20,11 +20,11 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 import ict.minesunshineone.landmark.LandmarkPlugin;
 import ict.minesunshineone.landmark.gui.LandmarkMenu;
 import ict.minesunshineone.landmark.model.Landmark;
-
 import net.kyori.adventure.title.Title;
 
 public class PlayerListener implements Listener {
@@ -180,7 +180,7 @@ public class PlayerListener implements Listener {
 
             // 绘制静态外圆
             double circleRadius = radius * 1.3;
-            int points = (int) (20 * (alpha + 0.1)); // 添加基础点��
+            int points = (int) (20 * (alpha + 0.1)); // 添加基础点数
             for (int i = 0; i < points; i++) {
                 double angle = (2 * Math.PI * i / points);
                 double x = center.getX() + Math.cos(angle) * circleRadius;
@@ -312,5 +312,12 @@ public class PlayerListener implements Listener {
                 break;
             }
         }
+    }
+
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID playerId = event.getPlayer().getUniqueId();
+        lastPlayerLocations.remove(playerId);
+        lastCheckTimes.remove(playerId);
     }
 }

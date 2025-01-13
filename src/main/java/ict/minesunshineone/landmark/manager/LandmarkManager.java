@@ -470,22 +470,32 @@ public class LandmarkManager {
     }
 
     public void cleanup() {
+        // 清理所有实体
         for (Landmark landmark : landmarks.values()) {
-            // 清理展示实体
-            if (landmark.getDisplayEntityId() != null) {
-                Entity entity = Bukkit.getEntity(landmark.getDisplayEntityId());
-                if (entity != null) {
-                    entity.remove();
-                }
-            }
+            removeLandmarkEntities(landmark);
+        }
 
-            // 清理交互实体
-            if (landmark.getInteractionEntityId() != null) {
-                Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
-                if (entity != null) {
-                    entity.remove();
-                }
+        // 清理数据结构
+        landmarks.clear();
+        unlockedLandmarks.clear();
+        cooldowns.clear();
+    }
+
+    private void removeLandmarkEntities(Landmark landmark) {
+        if (landmark.getDisplayEntityId() != null) {
+            Entity entity = Bukkit.getEntity(landmark.getDisplayEntityId());
+            if (entity != null) {
+                entity.remove();
             }
+            landmark.setDisplayEntityId(null);
+        }
+
+        if (landmark.getInteractionEntityId() != null) {
+            Entity entity = Bukkit.getEntity(landmark.getInteractionEntityId());
+            if (entity != null) {
+                entity.remove();
+            }
+            landmark.setInteractionEntityId(null);
         }
     }
 

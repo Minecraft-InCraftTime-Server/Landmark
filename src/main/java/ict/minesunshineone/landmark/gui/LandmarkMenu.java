@@ -10,7 +10,11 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -22,7 +26,7 @@ import ict.minesunshineone.landmark.model.Landmark;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-public class LandmarkMenu {
+public class LandmarkMenu implements Listener {
 
     private static final String LANDMARK_KEY = "landmark_name";
     private final LandmarkPlugin plugin;
@@ -38,6 +42,7 @@ public class LandmarkMenu {
         Component title = plugin.getConfigManager().getMessage("gui.title", "<gold>锚点传送菜单</gold>");
         int size = plugin.getConfigManager().getConfig().getInt("gui.size", 54);
         this.inventory = Bukkit.createInventory(null, size, title);
+
         initializeItems();
     }
 
@@ -282,10 +287,10 @@ public class LandmarkMenu {
     }
 
     public void open() {
-        plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
-            updateMenu();
-            player.openInventory(inventory);
-        });
+        // 在打开菜单时注册监听器并更新内容
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        updateMenu();
+        player.openInventory(inventory);
     }
 
     public static void handleClick(InventoryClickEvent event) {
@@ -315,12 +320,34 @@ public class LandmarkMenu {
 
             if (landmarkName != null && plugin.getLandmarkManager().isLandmarkUnlocked(player, landmarkName)) {
                 plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
+                    if (event.getInventory().getHolder() instanceof LandmarkMenu menu) {
+                        menu.cleanup();
+                    }
                     player.closeInventory();
                     plugin.getLandmarkManager().teleport(player, landmarkName);
                 });
             }
         } catch (Exception e) {
             plugin.getSLF4JLogger().error("GUI传送处理出错: {}", e.getMessage(), e);
+        }
+    }
+
+    // 添加关闭菜单时的清理方法
+    private void cleanup() {
+        // 清理物品栏内容
+        if (inventory != null) {
+            inventory.clear();
+        }
+
+        // 注销事件监听器
+        HandlerList.unregisterAll(this);
+    }
+
+    // 监听菜单关闭事件
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (event.getInventory().equals(inventory)) {
+            cleanup();
         }
     }
 }
