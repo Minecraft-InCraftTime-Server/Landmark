@@ -1,5 +1,5 @@
 name: LandmarkSystem
-version: '1.0.0'
+version: '${project.version}'
 main: ict.minesunshineone.landmark.LandmarkPlugin
 api-version: '1.20'
 description: '一个功能强大的锚点传送系统'

@@ -5,8 +5,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>ict.minesunshineone</groupId>
-    <artifactId>landmark-system</artifactId>
-    <version>1.4</version>
+    <artifactId>LandmarkSystem</artifactId>
+    <version>1.5</version>
 
     <properties>
         <java.version>21</java.version>

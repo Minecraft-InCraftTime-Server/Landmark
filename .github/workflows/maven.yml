@@ -26,5 +26,5 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: Landmark-Plugin
-        path: target/landmark-system-*.jar 
+        name: LandmarkSystem
+        path: target/LandmarkSystem-*.jar 
