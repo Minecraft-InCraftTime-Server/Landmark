@@ -27,7 +27,7 @@ import ict.minesunshineone.landmark.model.Landmark;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
-public class LandmarkMenu implements InventoryHolder, Listener {
+public class LandmarkMenu implements InventoryHolder {
 
     private static final String LANDMARK_KEY = "landmark_name";
     private final LandmarkPlugin plugin;
@@ -321,22 +321,4 @@ public class LandmarkMenu implements InventoryHolder, Listener {
         }
     }
 
-    // 添加关闭菜单时的清理方法
-    private void cleanup() {
-        // 清理物品栏内容
-        if (inventory != null) {
-            inventory.clear();
-        }
-
-        // 注销事件监听器
-        HandlerList.unregisterAll(this);
-    }
-
-    // 监听菜单关闭事件
-    @EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (event.getInventory().equals(inventory)) {
-            cleanup();
-        }
-    }
 }
