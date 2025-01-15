@@ -211,22 +211,27 @@ public class LandmarkManager {
 
         // 执行传送
         Location targetLocation = targetLandmark.getLocation();
-        plugin.getServer().getRegionScheduler().execute(plugin, targetLocation, () -> {
-            // 移除所有乘客
+        Location playerLocation = player.getLocation();
+
+        // 先在玩家当前位置的区域移除乘客
+        plugin.getServer().getRegionScheduler().execute(plugin, playerLocation, () -> {
             if (!player.getPassengers().isEmpty()) {
                 for (Entity passenger : player.getPassengers()) {
                     player.removePassenger(passenger);
                 }
             }
 
-            player.teleportAsync(targetLocation).thenAccept(result -> {
-                if (result) {
-                    plugin.getConfigManager().sendMessage(player, "teleport-success", "",
-                            "<landmark>", targetLandmark.getName());
-                    cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
-                } else {
-                    plugin.getConfigManager().sendMessage(player, "teleport-failed", "");
-                }
+            // 然后在目标位置的区域执行传送
+            plugin.getServer().getRegionScheduler().execute(plugin, targetLocation, () -> {
+                player.teleportAsync(targetLocation).thenAccept(result -> {
+                    if (result) {
+                        plugin.getConfigManager().sendMessage(player, "teleport-success", "",
+                                "<landmark>", targetLandmark.getName());
+                        cooldowns.put(player.getUniqueId(), System.currentTimeMillis());
+                    } else {
+                        plugin.getConfigManager().sendMessage(player, "teleport-failed", "");
+                    }
+                });
             });
         });
     }
