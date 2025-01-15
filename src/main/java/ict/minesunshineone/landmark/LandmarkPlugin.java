@@ -39,7 +39,6 @@ public class LandmarkPlugin extends JavaPlugin {
 
         // 添加定期清理任务
         getServer().getGlobalRegionScheduler().runAtFixedRate(this, task -> {
-            landmarkManager.cleanupInactivePlayers(24 * 60 * 60 * 1000); // 24小时
             landmarkManager.cleanupCooldowns();
         }, 20 * 60 * 60, 20 * 60 * 60); // 每小时执行一次
 

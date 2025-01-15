@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -211,8 +210,16 @@ public class LandmarkManager {
         }
 
         // 执行传送
-        plugin.getServer().getGlobalRegionScheduler().execute(plugin, () -> {
-            player.teleportAsync(targetLandmark.getLocation()).thenAccept(result -> {
+        Location targetLocation = targetLandmark.getLocation();
+        plugin.getServer().getRegionScheduler().execute(plugin, targetLocation, () -> {
+            // 移除所有乘客
+            if (!player.getPassengers().isEmpty()) {
+                for (Entity passenger : player.getPassengers()) {
+                    player.removePassenger(passenger);
+                }
+            }
+
+            player.teleportAsync(targetLocation).thenAccept(result -> {
                 if (result) {
                     plugin.getConfigManager().sendMessage(player, "teleport-success", "",
                             "<landmark>", targetLandmark.getName());
@@ -406,27 +413,6 @@ public class LandmarkManager {
         File playerFile = new File(new File(plugin.getDataFolder(), "player_data"), playerId.toString() + ".yml");
         if (playerFile.exists()) {
             playerFile.delete();
-        }
-    }
-
-    public void cleanupInactivePlayers(long inactiveTime) {
-        long currentTime = System.currentTimeMillis();
-        int cleanedCount = 0;
-
-        for (Iterator<Map.Entry<UUID, Set<String>>> it = unlockedLandmarks.entrySet().iterator(); it.hasNext();) {
-            Map.Entry<UUID, Set<String>> entry = it.next();
-            UUID playerId = entry.getKey();
-
-            if (Bukkit.getPlayer(playerId) == null
-                    && currentTime - cooldowns.getOrDefault(playerId, currentTime) > inactiveTime) {
-                cleanupPlayerData(playerId);
-                it.remove();
-                cleanedCount++;
-            }
-        }
-
-        if (cleanedCount > 0) {
-            plugin.getSLF4JLogger().info("已清理 {} 个不活跃玩家的数", cleanedCount);
         }
     }
 
