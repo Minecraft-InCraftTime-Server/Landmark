@@ -4,17 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.HandlerList;
-import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -31,14 +28,14 @@ public class LandmarkMenu implements InventoryHolder {
 
     private static final String LANDMARK_KEY = "landmark_name";
     private final LandmarkPlugin plugin;
-    private final Player player;
+    private final UUID playerId;
     private Inventory inventory;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final NamespacedKey landmarkKey;
 
     public LandmarkMenu(LandmarkPlugin plugin, Player player) {
         this.plugin = plugin;
-        this.player = player;
+        this.playerId = player.getUniqueId();
         this.landmarkKey = new NamespacedKey(plugin, LANDMARK_KEY);
     }
 
@@ -52,7 +49,7 @@ public class LandmarkMenu implements InventoryHolder {
         int size = plugin.getConfigManager().getConfig().getInt("gui.size", 54);
         this.inventory = Bukkit.createInventory(this, size, title);
         initializeItems();
-        player.openInventory(inventory);
+        getPlayer().openInventory(inventory);
     }
 
     private void initializeItems() {
@@ -96,8 +93,8 @@ public class LandmarkMenu implements InventoryHolder {
         boolean isAtAnyLandmark = false;
 
         for (Map.Entry<String, Landmark> entry : plugin.getLandmarkManager().getLandmarks().entrySet()) {
-            if (plugin.getLandmarkManager().isLandmarkUnlocked(player, entry.getKey())
-                    && plugin.getLandmarkManager().isPlayerNearLandmark(player, entry.getValue().getLocation())) {
+            if (plugin.getLandmarkManager().isLandmarkUnlocked(getPlayer(), entry.getKey())
+                    && plugin.getLandmarkManager().isPlayerNearLandmark(getPlayer(), entry.getValue().getLocation())) {
                 isAtAnyLandmark = true;
                 currentLandmark = entry.getValue();
                 break;
@@ -123,7 +120,7 @@ public class LandmarkMenu implements InventoryHolder {
 
             // 计算实际槽位（row对应第2-4行）
             int slot = (row * 9) + col;
-            boolean isUnlocked = plugin.getLandmarkManager().isLandmarkUnlocked(player, entry.getKey());
+            boolean isUnlocked = plugin.getLandmarkManager().isLandmarkUnlocked(getPlayer(), entry.getKey());
             ItemStack item = createLandmarkItem(landmark, isUnlocked);
 
             // 存储锚点名称到物品中
@@ -319,6 +316,10 @@ public class LandmarkMenu implements InventoryHolder {
                 plugin.getLandmarkManager().teleport(player, landmarkName);
             });
         }
+    }
+
+    private Player getPlayer() {
+        return Bukkit.getPlayer(playerId);
     }
 
 }

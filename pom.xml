@@ -6,7 +6,7 @@
 
     <groupId>ict.minesunshineone</groupId>
     <artifactId>LandmarkSystem</artifactId>
-    <version>1.5</version>
+    <version>1.6</version>
 
     <properties>
         <java.version>21</java.version>
