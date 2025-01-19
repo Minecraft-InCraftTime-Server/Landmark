@@ -279,21 +279,27 @@ public class PlayerListener implements Listener {
         lastCheckTimes.clear();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        // 只监听右键空气
-        if (event.getAction() != Action.RIGHT_CLICK_AIR) {
-            return;
-        }
-
+        Action action = event.getAction();
         Player player = event.getPlayer();
 
-        // 检查玩家是否在任意锚点范围内
-        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
-            if (plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
-                // 在锚点范围内,打开菜单
-                new LandmarkMenu(plugin, player).open();
+        // 检查是否是左键动作，并且点击的是空气（不要问为什么不右键，因为右键的事件好像有问题）
+        if (action == Action.LEFT_CLICK_AIR) {
+            // 检查权限
+            if (!player.hasPermission("landmark.menu")) {
                 return;
+            }
+
+            // 检查玩家是否在任意锚点范围内
+            for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
+                if (plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
+                    // 在锚点范围内,打开菜单
+                    plugin.getServer().getRegionScheduler().execute(plugin, player.getLocation(), () -> {
+                        new LandmarkMenu(plugin, player).open();
+                    });
+                    return;
+                }
             }
         }
     }
