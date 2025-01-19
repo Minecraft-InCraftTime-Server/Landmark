@@ -39,4 +39,10 @@ permissions:
     default: true
   landmark.admin:
     description: 管理员权限
+    default: op
+  landmark.unlock.all:
+    description: 允许一键解锁所有锚点
+    default: op
+  landmark.bypass.cooldown:
+    description: 允许无视传送冷却
     default: op 

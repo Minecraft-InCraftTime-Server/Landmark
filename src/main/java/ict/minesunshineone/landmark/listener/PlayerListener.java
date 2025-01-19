@@ -8,17 +8,13 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -283,44 +279,27 @@ public class PlayerListener implements Listener {
         lastCheckTimes.clear();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
-            return;
-        }
-
-        Block block = event.getClickedBlock();
-        if (block == null) {
-            return;
-        }
-
-        // 检查是否是锚点中心方块
-        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
-            Location landmarkLoc = landmark.getLocation();
-            if (block.getLocation().equals(landmarkLoc)) {
-                event.setCancelled(true);
-                new LandmarkMenu(plugin, event.getPlayer()).open();
-                break;
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerInteractAtEntity(PlayerInteractAtEntityEvent event) {
-        Entity entity = event.getRightClicked();
-        if (!(entity instanceof Interaction)) {
-            return;
-        }
-
+        Action action = event.getAction();
         Player player = event.getPlayer();
 
-        // 检查是否是锚点交互实体
-        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
-            if (landmark.getInteractionEntityId() != null
-                    && landmark.getInteractionEntityId().equals(entity.getUniqueId())) {
-                event.setCancelled(true);
-                new LandmarkMenu(plugin, player).open();
-                break;
+        // 检查是否是左键动作，并且点击的是空气（不要问为什么不右键，因为右键的事件好像有问题）
+        if (action == Action.LEFT_CLICK_AIR) {
+            // 检查权限
+            if (!player.hasPermission("landmark.menu")) {
+                return;
+            }
+
+            // 检查玩家是否在任意锚点范围内
+            for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
+                if (plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
+                    // 在锚点范围内,打开菜单
+                    plugin.getServer().getRegionScheduler().execute(plugin, player.getLocation(), () -> {
+                        new LandmarkMenu(plugin, player).open();
+                    });
+                    return;
+                }
             }
         }
     }

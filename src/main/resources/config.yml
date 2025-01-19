@@ -41,12 +41,7 @@ messages:
     separator: '<gradient:gold:yellow>✧══════════ 魔法锚点咒语书 ══════════✧</gradient>'
     command: '%prefix% <yellow>%command%</yellow>'
   landmark-exists: '<gradient:red:dark_red>✧ 魔法师,这个锚点名称已被占用了!</gradient>'
-  create-title: '<gradient:gold:yellow>✧══════════ 魔法锚点 ══════════✧</gradient>'
-  create-subtitle: '<gradient:green:aqua>成功创造新的锚点!</gradient>'
-  delete-title: '<gradient:red:dark_red>✧══════════ 魔法锚点 ══════════✧</gradient>'
-  delete-subtitle: '<gradient:red:dark_red>锚点已被抹除!</gradient>'
-  rename-title: '<gradient:gold:yellow>✧══════════ 魔法锚点 ══════════✧</gradient>'
-  rename-subtitle: '<gradient:green:aqua>锚点重命名成功!</gradient>'
+  unlock-all-success: '<gradient:green:aqua>✧ 魔法师成功解开了所有锚点的封印!</gradient>'
   
 # GUI设置
 gui:

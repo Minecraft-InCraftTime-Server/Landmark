@@ -10,7 +10,6 @@ public class Landmark {
     private Location location;
     private String description;
     private UUID displayEntityId;
-    private UUID interactionEntityId;
     private int menuRow;    // 在菜单中的行位置
     private int menuColumn; // 在菜单中的列位置
 
@@ -60,14 +59,6 @@ public class Landmark {
 
     public void setDisplayEntityId(UUID displayEntityId) {
         this.displayEntityId = displayEntityId;
-    }
-
-    public UUID getInteractionEntityId() {
-        return interactionEntityId;
-    }
-
-    public void setInteractionEntityId(UUID interactionEntityId) {
-        this.interactionEntityId = interactionEntityId;
     }
 
     public int getMenuRow() {
