@@ -10,15 +10,12 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerInteractAtEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -300,26 +297,6 @@ public class PlayerListener implements Listener {
             if (block.getLocation().equals(landmarkLoc)) {
                 event.setCancelled(true);
                 new LandmarkMenu(plugin, event.getPlayer()).open();
-                break;
-            }
-        }
-    }
-
-    @EventHandler
-    public void onPlayerInteractAtEntity(PlayerInteractAtEntityEvent event) {
-        Entity entity = event.getRightClicked();
-        if (!(entity instanceof Interaction)) {
-            return;
-        }
-
-        Player player = event.getPlayer();
-
-        // 检查是否是锚点交互实体
-        for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
-            if (landmark.getInteractionEntityId() != null
-                    && landmark.getInteractionEntityId().equals(entity.getUniqueId())) {
-                event.setCancelled(true);
-                new LandmarkMenu(plugin, player).open();
                 break;
             }
         }
