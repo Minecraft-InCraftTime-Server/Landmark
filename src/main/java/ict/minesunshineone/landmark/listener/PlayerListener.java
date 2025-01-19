@@ -8,7 +8,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.block.Block;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -282,22 +281,19 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onPlayerInteract(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+        // 只监听右键空气
+        if (event.getAction() != Action.RIGHT_CLICK_AIR) {
             return;
         }
 
-        Block block = event.getClickedBlock();
-        if (block == null) {
-            return;
-        }
+        Player player = event.getPlayer();
 
-        // 检查是否是锚点中心方块
+        // 检查玩家是否在任意锚点范围内
         for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
-            Location landmarkLoc = landmark.getLocation();
-            if (block.getLocation().equals(landmarkLoc)) {
-                event.setCancelled(true);
-                new LandmarkMenu(plugin, event.getPlayer()).open();
-                break;
+            if (plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
+                // 在锚点范围内,打开菜单
+                new LandmarkMenu(plugin, player).open();
+                return;
             }
         }
     }
