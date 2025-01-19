@@ -131,6 +131,10 @@ public class LandmarkManager {
     }
 
     public boolean canTeleport(Player player) {
+        // 如果玩家有无视冷却权限，直接返回true
+        if (player.hasPermission("landmark.bypass.cooldown")) {
+            return true;
+        }
         long lastTeleport = cooldowns.getOrDefault(player.getUniqueId(), 0L);
         long cooldownTime = plugin.getConfigManager().getCooldownTime() * 1000L;
         return System.currentTimeMillis() - lastTeleport >= cooldownTime;
@@ -406,5 +410,18 @@ public class LandmarkManager {
                 saveData();
             }
         }
+    }
+
+    // 新增一键解锁所有锚点的方法
+    public void unlockAllLandmarks(Player player) {
+        if (!player.hasPermission("landmark.unlock.all")) {
+            return;
+        }
+        Set<String> playerUnlocked = unlockedLandmarks.computeIfAbsent(player.getUniqueId(), k -> new HashSet<>());
+        for (String landmarkName : landmarks.keySet()) {
+            playerUnlocked.add(landmarkName.toLowerCase());
+        }
+        savePlayerData(player.getUniqueId());
+        plugin.getConfigManager().sendMessage(player, "unlock-all-success", "<gradient:green:aqua>✧ 魔法师解开了所有锚点的封印!</gradient>");
     }
 }

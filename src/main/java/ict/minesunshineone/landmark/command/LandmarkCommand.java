@@ -20,6 +20,7 @@ import ict.minesunshineone.landmark.command.impl.MenuCommand;
 import ict.minesunshineone.landmark.command.impl.ReloadCommand;
 import ict.minesunshineone.landmark.command.impl.RenameCommand;
 import ict.minesunshineone.landmark.command.impl.TeleportCommand;
+import ict.minesunshineone.landmark.command.impl.UnlockAllCommand;
 
 public class LandmarkCommand implements CommandExecutor, TabCompleter {
 
@@ -40,6 +41,7 @@ public class LandmarkCommand implements CommandExecutor, TabCompleter {
         subCommands.put("rename", new RenameCommand(plugin));
         subCommands.put("edit", new EditCommand(plugin));
         subCommands.put("reload", new ReloadCommand(plugin));
+        subCommands.put("unlockall", new UnlockAllCommand(plugin));
     }
 
     @Override
