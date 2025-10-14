@@ -25,6 +25,7 @@ public class LandmarkManager {
     private final Map<String, Landmark> landmarks;
     private final Map<UUID, Set<String>> unlockedLandmarks;
     private final Map<UUID, Long> cooldowns;
+    private static final int MAX_MENU_COLUMNS = 7;
 
     public LandmarkManager(LandmarkPlugin plugin) {
         this.plugin = plugin;
@@ -61,39 +62,26 @@ public class LandmarkManager {
     }
 
     private int[] calculateNextMenuPosition() {
-        int maxRow = 1;  // 从第二行开始（索引1）
-        int maxCol = 1;  // 从第一列开始（索引1）
-        boolean[][] occupied = new boolean[4][9]; // 4行9列的网格，实际使用1-3行，1-7列
+        int maxRow = getMaxMenuRows();
+        boolean[][] occupied = new boolean[maxRow + 1][MAX_MENU_COLUMNS + 1];
 
-        // 标记已占用的位置
         for (Landmark landmark : landmarks.values()) {
             int row = landmark.getMenuRow();
             int col = landmark.getMenuColumn();
-            if (row >= 1 && row <= 3 && col >= 1 && col <= 7) {  // 修改范围：第2-4行（索引1-3），第1-7列
+            if (row >= 1 && row <= maxRow && col >= 1 && col <= MAX_MENU_COLUMNS) {
                 occupied[row][col] = true;
-                maxRow = Math.max(maxRow, row);
-                maxCol = Math.max(maxCol, col);
             }
         }
 
-        // 寻找下一个可用位置（从第二行到第四行，第一列到第七列）
-        for (int row = 1; row <= 3; row++) {
-            for (int col = 1; col <= 7; col++) {
+        for (int row = 1; row <= maxRow; row++) {
+            for (int col = 1; col <= MAX_MENU_COLUMNS; col++) {
                 if (!occupied[row][col]) {
                     return new int[]{row, col};
                 }
             }
         }
 
-        // 如果当前行未满，添加到当前行的下一个位置
-        if (maxCol < 7) {
-            return new int[]{maxRow, maxCol + 1};
-        }
-        // 如果需要新的一行（最多到第3行，对应实际的第4行）
-        if (maxRow < 3) {
-            return new int[]{maxRow + 1, 1};  // 新行从第一列开始
-        }
-        // 如果菜单已满，返回默认位置（第1行第1列，对应实际的第2行第1列）
+        plugin.getSLF4JLogger().warn("锚点菜单已满，使用默认位置 (1,1)");
         return new int[]{1, 1};
     }
 
@@ -231,6 +219,16 @@ public class LandmarkManager {
                                 // 修改默认值：行从1开始，列从1开始
                                 int menuRow = landmarkSection.getInt("menu_row", 1);
                                 int menuColumn = landmarkSection.getInt("menu_column", 1);
+
+                                int maxRow = getMaxMenuRows();
+                                if (menuRow < 1 || menuRow > maxRow) {
+                                    plugin.getSLF4JLogger().warn("锚点 {} 的菜单行 {} 超出范围，已调整至有效值", key, menuRow);
+                                    menuRow = Math.max(1, Math.min(menuRow, maxRow));
+                                }
+                                if (menuColumn < 1 || menuColumn > MAX_MENU_COLUMNS) {
+                                    plugin.getSLF4JLogger().warn("锚点 {} 的菜单列 {} 超出范围，已调整至有效值", key, menuColumn);
+                                    menuColumn = Math.max(1, Math.min(menuColumn, MAX_MENU_COLUMNS));
+                                }
 
                                 Landmark landmark = new Landmark(key, location, description, menuRow, menuColumn);
                                 landmarks.put(key.toLowerCase(), landmark);
@@ -403,13 +401,20 @@ public class LandmarkManager {
     public void updateMenuPosition(String landmarkName, int newRow, int newColumn) {
         Landmark landmark = landmarks.get(landmarkName.toLowerCase());
         if (landmark != null) {
-            // 确保位置在有效范围内（第2-4行，即索引1-3，列1-7）
-            if (newRow >= 1 && newRow <= 3 && newColumn >= 1 && newColumn <= 7) {
+            int maxRow = getMaxMenuRows();
+            // 确保位置在有效范围内（第2-倒数第二行，即索引1-maxRow，列1-7）
+            if (newRow >= 1 && newRow <= maxRow && newColumn >= 1 && newColumn <= MAX_MENU_COLUMNS) {
                 landmark.setMenuRow(newRow);
                 landmark.setMenuColumn(newColumn);
                 saveData();
             }
         }
+    }
+
+    private int getMaxMenuRows() {
+        int guiSize = plugin.getConfigManager().getConfig().getInt("gui.size", 54);
+        int totalRows = Math.max(1, guiSize / 9);
+        return Math.max(1, totalRows - 2);
     }
 
     // 新增一键解锁所有锚点的方法

@@ -46,7 +46,8 @@ messages:
 # GUI设置
 gui:
   title: '<#c7a3ed><bold>✧ 魔法锚点系统 ✦</bold>'
-  size: 45
+  # 菜单总格数 (6 行 x 9 列)
+  size: 54
   border:
     material: BLACK_STAINED_GLASS_PANE
     name: ' '

@@ -27,6 +27,8 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 public class LandmarkMenu implements InventoryHolder {
 
     private static final String LANDMARK_KEY = "landmark_name";
+    private static final int INVENTORY_COLUMNS = 9;
+    private static final int MAX_MENU_COLUMNS = 7;
     private final LandmarkPlugin plugin;
     private final UUID playerId;
     private Inventory inventory;
@@ -61,16 +63,20 @@ public class LandmarkMenu implements InventoryHolder {
     private void setupBorder() {
         ItemStack border = createBorderItem();
 
+        int rows = Math.max(1, inventory.getSize() / INVENTORY_COLUMNS);
+        int lastRowStart = (rows - 1) * INVENTORY_COLUMNS;
+
         // 设置顶部和底部边框
-        for (int i = 0; i < 9; i++) {
-            inventory.setItem(i, border.clone());
-            inventory.setItem(36 + i, border.clone());
+        for (int column = 0; column < INVENTORY_COLUMNS; column++) {
+            inventory.setItem(column, border.clone());
+            inventory.setItem(lastRowStart + column, border.clone());
         }
 
         // 设置左右边框
-        for (int i = 1; i < 4; i++) {
-            inventory.setItem(9 * i, border.clone());
-            inventory.setItem(9 * i + 8, border.clone());
+        for (int row = 1; row < rows - 1; row++) {
+            int rowStart = row * INVENTORY_COLUMNS;
+            inventory.setItem(rowStart, border.clone());
+            inventory.setItem(rowStart + (INVENTORY_COLUMNS - 1), border.clone());
         }
     }
 
@@ -102,24 +108,29 @@ public class LandmarkMenu implements InventoryHolder {
         }
 
         ItemStack currentLocationItem = createCurrentLocationItem(isAtAnyLandmark, currentLandmark);
-        inventory.setItem(40, currentLocationItem);
+        int centerColumn = INVENTORY_COLUMNS / 2;
+        int centerSlot = (inventory.getSize() - INVENTORY_COLUMNS) + centerColumn;
+        if (centerSlot >= 0 && centerSlot < inventory.getSize()) {
+            inventory.setItem(centerSlot, currentLocationItem);
+        }
     }
 
     private void setupLandmarks() {
+        int maxMenuRow = Math.max(1, (inventory.getSize() / INVENTORY_COLUMNS) - 2);
         for (Map.Entry<String, Landmark> entry : plugin.getLandmarkManager().getLandmarks().entrySet()) {
             Landmark landmark = entry.getValue();
             int row = landmark.getMenuRow();
             int col = landmark.getMenuColumn();
 
-            // 确保位置在有效范围内（第2-4行，即索引1-3，列1-7）
-            if (row < 1 || row > 3 || col < 1 || col > 7) {
+            // 确保位置在有效范围内（第2-倒数第二行，即索引1-maxMenuRow，列1-7）
+            if (row < 1 || row > maxMenuRow || col < 1 || col > MAX_MENU_COLUMNS) {
                 plugin.getSLF4JLogger().warn("锚点 {} 的位置 ({}, {}) 超出有效范围，将在下次加载时自动修复",
                         landmark.getName(), row, col);
                 continue;
             }
 
-            // 计算实际槽位（row对应第2-4行）
-            int slot = (row * 9) + col;
+            // 计算实际槽位（row 为去除边框后的行索引）
+            int slot = (row * INVENTORY_COLUMNS) + col;
             boolean isUnlocked = plugin.getLandmarkManager().isLandmarkUnlocked(getPlayer(), entry.getKey());
             ItemStack item = createLandmarkItem(landmark, isUnlocked);
 
