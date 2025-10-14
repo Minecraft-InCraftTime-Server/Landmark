@@ -27,18 +27,27 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 public class LandmarkMenu implements InventoryHolder {
 
     private static final String LANDMARK_KEY = "landmark_name";
+    private static final String NAVIGATION_KEY = "landmark_nav";
+    private static final String NAV_PREVIOUS = "previous";
+    private static final String NAV_NEXT = "next";
     private static final int INVENTORY_COLUMNS = 9;
-    private static final int MAX_MENU_COLUMNS = 7;
+    private static final int MENU_COLUMNS = 7;
     private final LandmarkPlugin plugin;
     private final UUID playerId;
     private Inventory inventory;
     private final MiniMessage miniMessage = MiniMessage.miniMessage();
     private final NamespacedKey landmarkKey;
+    private final NamespacedKey navigationKey;
+    private int currentPage = 0;
+    private int rowsPerPage;
+    private int slotsPerPage;
+    private int totalPages = 1;
 
     public LandmarkMenu(LandmarkPlugin plugin, Player player) {
         this.plugin = plugin;
         this.playerId = player.getUniqueId();
         this.landmarkKey = new NamespacedKey(plugin, LANDMARK_KEY);
+        this.navigationKey = new NamespacedKey(plugin, NAVIGATION_KEY);
     }
 
     @Override
@@ -50,14 +59,24 @@ public class LandmarkMenu implements InventoryHolder {
         Component title = plugin.getConfigManager().getMessage("gui.title", "<gold>锚点传送菜单</gold>");
         int size = plugin.getConfigManager().getConfig().getInt("gui.size", 54);
         this.inventory = Bukkit.createInventory(this, size, title);
+        this.currentPage = 0;
         initializeItems();
         getPlayer().openInventory(inventory);
     }
 
     private void initializeItems() {
+        if (inventory == null) {
+            return;
+        }
+
+        inventory.clear();
         setupBorder();
+
+        List<Map.Entry<String, Landmark>> orderedLandmarks = plugin.getLandmarkManager().getOrderedLandmarks();
+        recomputePagination(orderedLandmarks.size());
+        setupLandmarks(orderedLandmarks);
+        setupNavigationControls();
         setupCurrentLocation();
-        setupLandmarks();
     }
 
     private void setupBorder() {
@@ -95,12 +114,17 @@ public class LandmarkMenu implements InventoryHolder {
     }
 
     private void setupCurrentLocation() {
+        Player player = getPlayer();
+        if (player == null) {
+            return;
+        }
+
         Landmark currentLandmark = null;
         boolean isAtAnyLandmark = false;
 
         for (Map.Entry<String, Landmark> entry : plugin.getLandmarkManager().getLandmarks().entrySet()) {
-            if (plugin.getLandmarkManager().isLandmarkUnlocked(getPlayer(), entry.getKey())
-                    && plugin.getLandmarkManager().isPlayerNearLandmark(getPlayer(), entry.getValue().getLocation())) {
+            if (plugin.getLandmarkManager().isLandmarkUnlocked(player, entry.getKey())
+                    && plugin.getLandmarkManager().isPlayerNearLandmark(player, entry.getValue().getLocation())) {
                 isAtAnyLandmark = true;
                 currentLandmark = entry.getValue();
                 break;
@@ -115,26 +139,34 @@ public class LandmarkMenu implements InventoryHolder {
         }
     }
 
-    private void setupLandmarks() {
-        int maxMenuRow = Math.max(1, (inventory.getSize() / INVENTORY_COLUMNS) - 2);
-        for (Map.Entry<String, Landmark> entry : plugin.getLandmarkManager().getLandmarks().entrySet()) {
-            Landmark landmark = entry.getValue();
-            int row = landmark.getMenuRow();
-            int col = landmark.getMenuColumn();
+    private void setupLandmarks(List<Map.Entry<String, Landmark>> orderedLandmarks) {
+        if (slotsPerPage <= 0) {
+            return;
+        }
 
-            // 确保位置在有效范围内（第2-倒数第二行，即索引1-maxMenuRow，列1-7）
-            if (row < 1 || row > maxMenuRow || col < 1 || col > MAX_MENU_COLUMNS) {
-                plugin.getSLF4JLogger().warn("锚点 {} 的位置 ({}, {}) 超出有效范围，将在下次加载时自动修复",
-                        landmark.getName(), row, col);
+        Player player = getPlayer();
+        if (player == null) {
+            return;
+        }
+
+        int startIndex = currentPage * slotsPerPage;
+        int endIndex = Math.min(startIndex + slotsPerPage, orderedLandmarks.size());
+
+        for (int index = startIndex; index < endIndex; index++) {
+            Map.Entry<String, Landmark> entry = orderedLandmarks.get(index);
+            Landmark landmark = entry.getValue();
+
+            int offset = index - startIndex;
+            int row = (offset / MENU_COLUMNS) + 1;
+            int col = (offset % MENU_COLUMNS) + 1;
+            int slot = (row * INVENTORY_COLUMNS) + col;
+            if (slot < 0 || slot >= inventory.getSize()) {
                 continue;
             }
 
-            // 计算实际槽位（row 为去除边框后的行索引）
-            int slot = (row * INVENTORY_COLUMNS) + col;
-            boolean isUnlocked = plugin.getLandmarkManager().isLandmarkUnlocked(getPlayer(), entry.getKey());
+            boolean isUnlocked = plugin.getLandmarkManager().isLandmarkUnlocked(player, entry.getKey());
             ItemStack item = createLandmarkItem(landmark, isUnlocked);
 
-            // 存储锚点名称到物品中
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
                 PersistentDataContainer container = meta.getPersistentDataContainer();
@@ -144,6 +176,70 @@ public class LandmarkMenu implements InventoryHolder {
 
             inventory.setItem(slot, item);
         }
+    }
+
+    private void recomputePagination(int totalLandmarks) {
+        rowsPerPage = Math.max(1, (inventory.getSize() / INVENTORY_COLUMNS) - 2);
+        slotsPerPage = Math.max(1, rowsPerPage * MENU_COLUMNS);
+        totalPages = Math.max(1, (int) Math.ceil(totalLandmarks / (double) slotsPerPage));
+        if (currentPage >= totalPages) {
+            currentPage = totalPages - 1;
+        }
+    }
+
+    private void setupNavigationControls() {
+        int bottomRowStart = inventory.getSize() - INVENTORY_COLUMNS;
+        if (bottomRowStart < 0) {
+            return;
+        }
+
+        ItemStack indicator = createPageIndicatorItem();
+        inventory.setItem(bottomRowStart + (INVENTORY_COLUMNS - 1), indicator);
+
+        if (totalPages <= 1) {
+            return;
+        }
+
+        ItemStack previous = createNavigationItem(
+                "<#c7a3ed><bold>上一页</bold>",
+                "<gray><bold>已是第一页</bold>",
+                NAV_PREVIOUS,
+                currentPage > 0);
+        ItemStack next = createNavigationItem(
+                "<#c7a3ed><bold>下一页</bold>",
+                "<gray><bold>已是最后一页</bold>",
+                NAV_NEXT,
+                currentPage < totalPages - 1);
+
+        inventory.setItem(bottomRowStart + 1, previous);
+        inventory.setItem(bottomRowStart + (INVENTORY_COLUMNS - 2), next);
+    }
+
+    private ItemStack createNavigationItem(String activeName, String inactiveName, String action, boolean enabled) {
+        Material material = enabled ? Material.ARROW : Material.GRAY_STAINED_GLASS_PANE;
+        String displayName = enabled ? activeName : inactiveName;
+
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(miniMessage.deserialize(displayName));
+            if (enabled) {
+                meta.getPersistentDataContainer().set(navigationKey, PersistentDataType.STRING, action);
+            }
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private ItemStack createPageIndicatorItem() {
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            String title = String.format("<#c7a3ed><bold>第 %d / %d 页</bold>", currentPage + 1, totalPages);
+            meta.displayName(miniMessage.deserialize(title));
+            item.setItemMeta(meta);
+        }
+        return item;
     }
 
     private ItemStack createCurrentLocationItem(boolean isAtAnyLandmark, Landmark currentLandmark) {
@@ -319,6 +415,12 @@ public class LandmarkMenu implements InventoryHolder {
         }
 
         PersistentDataContainer container = meta.getPersistentDataContainer();
+        String navigationAction = container.get(navigationKey, PersistentDataType.STRING);
+        if (navigationAction != null) {
+            handleNavigationClick(navigationAction);
+            return;
+        }
+
         String landmarkName = container.get(landmarkKey, PersistentDataType.STRING);
 
         if (landmarkName != null && plugin.getLandmarkManager().isLandmarkUnlocked(player, landmarkName)) {
@@ -326,6 +428,16 @@ public class LandmarkMenu implements InventoryHolder {
                 player.closeInventory();
                 plugin.getLandmarkManager().teleport(player, landmarkName);
             });
+        }
+    }
+
+    private void handleNavigationClick(String action) {
+        if (NAV_PREVIOUS.equals(action) && currentPage > 0) {
+            currentPage--;
+            initializeItems();
+        } else if (NAV_NEXT.equals(action) && currentPage < totalPages - 1) {
+            currentPage++;
+            initializeItems();
         }
     }
 

@@ -3,8 +3,10 @@ package ict.minesunshineone.landmark.manager;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -25,11 +27,11 @@ public class LandmarkManager {
     private final Map<String, Landmark> landmarks;
     private final Map<UUID, Set<String>> unlockedLandmarks;
     private final Map<UUID, Long> cooldowns;
-    private static final int MAX_MENU_COLUMNS = 7;
+    private static final int MENU_COLUMNS = 7;
 
     public LandmarkManager(LandmarkPlugin plugin) {
         this.plugin = plugin;
-        this.landmarks = new HashMap<>();
+        this.landmarks = new LinkedHashMap<>();
         this.unlockedLandmarks = new HashMap<>();
         this.cooldowns = new HashMap<>();
         loadData();
@@ -46,12 +48,14 @@ public class LandmarkManager {
         }
 
         try {
-            // 计算新锚点的菜单位置
-            int[] menuPosition = calculateNextMenuPosition();
+            int index = landmarks.size();
+            int row = (index / MENU_COLUMNS) + 1;
+            int column = (index % MENU_COLUMNS) + 1;
 
-            // 创建锚点并保存
-            Landmark landmark = new Landmark(name, location, description, menuPosition[0], menuPosition[1]);
+            Landmark landmark = new Landmark(name, location, description, row, column);
             landmarks.put(name.toLowerCase(), landmark);
+
+            normalizeMenuPositions();
 
             plugin.getSLF4JLogger().info("成功创建锚点展示实体: {}", name);
             saveData();
@@ -59,30 +63,6 @@ public class LandmarkManager {
             plugin.getSLF4JLogger().error("创建锚点时发生错误: {}", e.getMessage());
             landmarks.remove(name.toLowerCase());
         }
-    }
-
-    private int[] calculateNextMenuPosition() {
-        int maxRow = getMaxMenuRows();
-        boolean[][] occupied = new boolean[maxRow + 1][MAX_MENU_COLUMNS + 1];
-
-        for (Landmark landmark : landmarks.values()) {
-            int row = landmark.getMenuRow();
-            int col = landmark.getMenuColumn();
-            if (row >= 1 && row <= maxRow && col >= 1 && col <= MAX_MENU_COLUMNS) {
-                occupied[row][col] = true;
-            }
-        }
-
-        for (int row = 1; row <= maxRow; row++) {
-            for (int col = 1; col <= MAX_MENU_COLUMNS; col++) {
-                if (!occupied[row][col]) {
-                    return new int[]{row, col};
-                }
-            }
-        }
-
-        plugin.getSLF4JLogger().warn("锚点菜单已满，使用默认位置 (1,1)");
-        return new int[]{1, 1};
     }
 
     public void deleteLandmark(String name) {
@@ -96,6 +76,8 @@ public class LandmarkManager {
             for (Map.Entry<UUID, Set<String>> entry : unlockedLandmarks.entrySet()) {
                 entry.getValue().remove(lowerName);
             }
+
+            normalizeMenuPositions();
 
             // 保存更新后的数据
             saveData();
@@ -220,14 +202,13 @@ public class LandmarkManager {
                                 int menuRow = landmarkSection.getInt("menu_row", 1);
                                 int menuColumn = landmarkSection.getInt("menu_column", 1);
 
-                                int maxRow = getMaxMenuRows();
-                                if (menuRow < 1 || menuRow > maxRow) {
-                                    plugin.getSLF4JLogger().warn("锚点 {} 的菜单行 {} 超出范围，已调整至有效值", key, menuRow);
-                                    menuRow = Math.max(1, Math.min(menuRow, maxRow));
+                                if (menuRow < 1) {
+                                    plugin.getSLF4JLogger().warn("锚点 {} 的菜单行 {} 无效，已调整为 1", key, menuRow);
+                                    menuRow = 1;
                                 }
-                                if (menuColumn < 1 || menuColumn > MAX_MENU_COLUMNS) {
+                                if (menuColumn < 1 || menuColumn > MENU_COLUMNS) {
                                     plugin.getSLF4JLogger().warn("锚点 {} 的菜单列 {} 超出范围，已调整至有效值", key, menuColumn);
-                                    menuColumn = Math.max(1, Math.min(menuColumn, MAX_MENU_COLUMNS));
+                                    menuColumn = Math.max(1, Math.min(menuColumn, MENU_COLUMNS));
                                 }
 
                                 Landmark landmark = new Landmark(key, location, description, menuRow, menuColumn);
@@ -240,10 +221,12 @@ public class LandmarkManager {
                 }
 
             }
-        }
+    }
 
-        // 加载玩家数据
-        loadPlayerData();
+    normalizeMenuPositions();
+
+    // 加载玩家数据
+    loadPlayerData();
     }
 
     private void loadPlayerData() {
@@ -268,7 +251,7 @@ public class LandmarkManager {
         File dataFile = new File(plugin.getDataFolder(), plugin.getConfigManager().getDataFileName());
         YamlConfiguration data = new YamlConfiguration();
         ConfigurationSection landmarksSection = data.createSection("landmarks");
-        for (Map.Entry<String, Landmark> entry : landmarks.entrySet()) {
+        for (Map.Entry<String, Landmark> entry : getOrderedLandmarks()) {
             ConfigurationSection landmarkSection = landmarksSection.createSection(entry.getKey());
             Landmark landmark = entry.getValue();
             landmarkSection.set("location", landmark.getLocation());
@@ -337,6 +320,8 @@ public class LandmarkManager {
             landmark.setMenuRow(oldRow);
             landmark.setMenuColumn(oldColumn);
 
+            normalizeMenuPositions();
+
             // 保存更新后的数据
             saveData();
 
@@ -349,6 +334,15 @@ public class LandmarkManager {
 
     public Map<String, Landmark> getLandmarks() {
         return landmarks;
+    }
+
+    public List<Map.Entry<String, Landmark>> getOrderedLandmarks() {
+        List<Map.Entry<String, Landmark>> orderedEntries = new ArrayList<>(landmarks.entrySet());
+        orderedEntries.sort(Comparator
+                .comparingInt((Map.Entry<String, Landmark> entry) -> entry.getValue().getMenuRow())
+                .thenComparingInt(entry -> entry.getValue().getMenuColumn())
+                .thenComparing(entry -> entry.getValue().getName(), String.CASE_INSENSITIVE_ORDER));
+        return orderedEntries;
     }
 
     public Set<String> getUnlockedLandmarks(Player player) {
@@ -401,20 +395,40 @@ public class LandmarkManager {
     public void updateMenuPosition(String landmarkName, int newRow, int newColumn) {
         Landmark landmark = landmarks.get(landmarkName.toLowerCase());
         if (landmark != null) {
-            int maxRow = getMaxMenuRows();
-            // 确保位置在有效范围内（第2-倒数第二行，即索引1-maxRow，列1-7）
-            if (newRow >= 1 && newRow <= maxRow && newColumn >= 1 && newColumn <= MAX_MENU_COLUMNS) {
+            if (newRow >= 1 && newColumn >= 1 && newColumn <= MENU_COLUMNS) {
                 landmark.setMenuRow(newRow);
                 landmark.setMenuColumn(newColumn);
+                normalizeMenuPositions();
                 saveData();
             }
         }
     }
 
-    private int getMaxMenuRows() {
-        int guiSize = plugin.getConfigManager().getConfig().getInt("gui.size", 54);
-        int totalRows = Math.max(1, guiSize / 9);
-        return Math.max(1, totalRows - 2);
+    private void normalizeMenuPositions() {
+        if (landmarks.isEmpty()) {
+            return;
+        }
+
+        List<Map.Entry<String, Landmark>> orderedEntries = new ArrayList<>(landmarks.entrySet());
+        orderedEntries.sort(Comparator
+                .comparingInt((Map.Entry<String, Landmark> entry) -> entry.getValue().getMenuRow())
+                .thenComparingInt(entry -> entry.getValue().getMenuColumn())
+                .thenComparing(entry -> entry.getValue().getName(), String.CASE_INSENSITIVE_ORDER));
+
+        Map<String, Landmark> reordered = new LinkedHashMap<>();
+        int index = 0;
+        for (Map.Entry<String, Landmark> entry : orderedEntries) {
+            Landmark landmark = entry.getValue();
+            int row = (index / MENU_COLUMNS) + 1;
+            int column = (index % MENU_COLUMNS) + 1;
+            landmark.setMenuRow(row);
+            landmark.setMenuColumn(column);
+            reordered.put(entry.getKey(), landmark);
+            index++;
+        }
+
+        landmarks.clear();
+        landmarks.putAll(reordered);
     }
 
     // 新增一键解锁所有锚点的方法
