@@ -3,16 +3,19 @@ package ict.minesunshineone.landmark.manager;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
@@ -28,6 +31,44 @@ public class LandmarkManager {
     private final Map<UUID, Set<String>> unlockedLandmarks;
     private final Map<UUID, Long> cooldowns;
     private static final int MENU_COLUMNS = 7;
+    private final Random random = new Random();
+    
+    // 精选的美观物品列表
+    private static final List<Material> ICON_MATERIALS = Arrays.asList(
+        // 宝石类
+        Material.DIAMOND, Material.EMERALD, Material.AMETHYST_SHARD, Material.PRISMARINE_SHARD,
+        Material.ECHO_SHARD, Material.NETHERITE_SCRAP, Material.GOLD_INGOT, Material.IRON_INGOT,
+        // 方块类
+        Material.ENCHANTED_BOOK, Material.NETHER_STAR, Material.TOTEM_OF_UNDYING, 
+        Material.TRIDENT, Material.ELYTRA, Material.HEART_OF_THE_SEA, Material.NAUTILUS_SHELL,
+        // 装饰类
+        Material.BEACON, Material.CONDUIT, Material.END_CRYSTAL, Material.DRAGON_EGG,
+        Material.DRAGON_HEAD, Material.CREEPER_HEAD, Material.PLAYER_HEAD, Material.ZOMBIE_HEAD,
+        // 花朵类
+        Material.POPPY, Material.DANDELION, Material.BLUE_ORCHID, Material.ALLIUM,
+        Material.AZURE_BLUET, Material.ORANGE_TULIP, Material.PINK_TULIP, Material.OXEYE_DAISY,
+        Material.CORNFLOWER, Material.LILY_OF_THE_VALLEY, Material.WITHER_ROSE, Material.SUNFLOWER,
+        Material.ROSE_BUSH, Material.PEONY, Material.LILAC,
+        // 珊瑚类
+        Material.BRAIN_CORAL, Material.BUBBLE_CORAL, Material.FIRE_CORAL, 
+        Material.HORN_CORAL, Material.TUBE_CORAL,
+        // 其他装饰品
+        Material.HONEYCOMB, Material.HONEY_BOTTLE, Material.EXPERIENCE_BOTTLE,
+        Material.ENDER_EYE, Material.ENDER_PEARL, Material.BLAZE_ROD, Material.BLAZE_POWDER,
+        Material.MAGMA_CREAM, Material.GHAST_TEAR, Material.FERMENTED_SPIDER_EYE,
+        Material.GLOW_BERRIES, Material.SWEET_BERRIES, Material.APPLE, Material.GOLDEN_APPLE,
+        Material.ENCHANTED_GOLDEN_APPLE, Material.CAKE, Material.COOKIE, Material.PUMPKIN_PIE,
+        // 音乐唱片
+        Material.MUSIC_DISC_13, Material.MUSIC_DISC_CAT, Material.MUSIC_DISC_BLOCKS,
+        Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_MALL,
+        Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_STAL, Material.MUSIC_DISC_STRAD,
+        Material.MUSIC_DISC_WARD, Material.MUSIC_DISC_11, Material.MUSIC_DISC_WAIT,
+        Material.MUSIC_DISC_PIGSTEP, Material.MUSIC_DISC_OTHERSIDE, Material.MUSIC_DISC_5,
+        // 彩色物品
+        Material.RED_DYE, Material.ORANGE_DYE, Material.YELLOW_DYE, Material.LIME_DYE,
+        Material.GREEN_DYE, Material.CYAN_DYE, Material.LIGHT_BLUE_DYE, Material.BLUE_DYE,
+        Material.PURPLE_DYE, Material.MAGENTA_DYE, Material.PINK_DYE, Material.WHITE_DYE
+    );
 
     public LandmarkManager(LandmarkPlugin plugin) {
         this.plugin = plugin;
@@ -52,17 +93,27 @@ public class LandmarkManager {
             int row = (index / MENU_COLUMNS) + 1;
             int column = (index % MENU_COLUMNS) + 1;
 
-            Landmark landmark = new Landmark(name, location, description, row, column);
+            // 随机选择一个图标材质
+            Material randomIcon = getRandomIconMaterial();
+
+            Landmark landmark = new Landmark(name, location, description, row, column, randomIcon);
             landmarks.put(name.toLowerCase(), landmark);
 
             normalizeMenuPositions();
 
-            plugin.getSLF4JLogger().info("成功创建锚点展示实体: {}", name);
+            plugin.getSLF4JLogger().info("成功创建锚点展示实体: {} (图标: {})", name, randomIcon.name());
             saveData();
         } catch (IllegalArgumentException | IllegalStateException e) {
             plugin.getSLF4JLogger().error("创建锚点时发生错误: {}", e.getMessage());
             landmarks.remove(name.toLowerCase());
         }
+    }
+    
+    /**
+     * 获取一个随机的图标材质
+     */
+    private Material getRandomIconMaterial() {
+        return ICON_MATERIALS.get(random.nextInt(ICON_MATERIALS.size()));
     }
 
     public void deleteLandmark(String name) {
@@ -211,7 +262,21 @@ public class LandmarkManager {
                                     menuColumn = Math.max(1, Math.min(menuColumn, MENU_COLUMNS));
                                 }
 
-                                Landmark landmark = new Landmark(key, location, description, menuRow, menuColumn);
+                                // 加载图标材质，如果不存在则随机生成一个
+                                Material iconMaterial;
+                                String iconMaterialStr = landmarkSection.getString("icon_material");
+                                if (iconMaterialStr != null) {
+                                    try {
+                                        iconMaterial = Material.valueOf(iconMaterialStr);
+                                    } catch (IllegalArgumentException e) {
+                                        plugin.getSLF4JLogger().warn("锚点 {} 的图标材质 {} 无效，将随机生成", key, iconMaterialStr);
+                                        iconMaterial = getRandomIconMaterial();
+                                    }
+                                } else {
+                                    iconMaterial = getRandomIconMaterial();
+                                }
+
+                                Landmark landmark = new Landmark(key, location, description, menuRow, menuColumn, iconMaterial);
                                 landmarks.put(key.toLowerCase(), landmark);
                             }
                         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -258,6 +323,10 @@ public class LandmarkManager {
             landmarkSection.set("description", landmark.getDescription());
             landmarkSection.set("menu_row", landmark.getMenuRow());
             landmarkSection.set("menu_column", landmark.getMenuColumn());
+            // 保存图标材质
+            if (landmark.getIconMaterial() != null) {
+                landmarkSection.set("icon_material", landmark.getIconMaterial().name());
+            }
         }
         try {
             data.save(dataFile);

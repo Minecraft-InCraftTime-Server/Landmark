@@ -279,8 +279,15 @@ public class LandmarkMenu implements InventoryHolder {
     }
 
     private ItemStack createLandmarkItem(Landmark landmark, boolean isUnlocked) {
-        String materialPath = isUnlocked ? "gui.items.unlocked.material" : "gui.items.locked.material";
-        Material material = Material.valueOf(Objects.requireNonNull(plugin.getConfigManager().getConfig().getString(materialPath, "DIAMOND")));
+        // 如果已解锁，使用地标的自定义图标；如果未解锁，使用配置中的锁定材质
+        Material material;
+        if (isUnlocked && landmark.getIconMaterial() != null) {
+            material = landmark.getIconMaterial();
+        } else {
+            String materialPath = isUnlocked ? "gui.items.unlocked.material" : "gui.items.locked.material";
+            material = Material.valueOf(Objects.requireNonNull(plugin.getConfigManager().getConfig().getString(materialPath, "DIAMOND")));
+        }
+        
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) {

@@ -3,6 +3,7 @@ package ict.minesunshineone.landmark.model;
 import java.util.UUID;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 
 public class Landmark {
 
@@ -12,6 +13,7 @@ public class Landmark {
     private UUID displayEntityId;
     private int menuRow;    // 在菜单中的行位置
     private int menuColumn; // 在菜单中的列位置
+    private Material iconMaterial; // 在菜单中显示的图标材质
 
     public Landmark(String name, Location location, String description) {
         this.name = name;
@@ -19,6 +21,7 @@ public class Landmark {
         this.description = description;
         this.menuRow = 1;    // 默认从第二行开始（索引1）
         this.menuColumn = 1; // 默认从第一列开始（索引1）
+        this.iconMaterial = null; // 将在创建时设置
     }
 
     public Landmark(String name, Location location, String description, int menuRow, int menuColumn) {
@@ -27,6 +30,16 @@ public class Landmark {
         this.description = description;
         this.menuRow = menuRow;
         this.menuColumn = menuColumn;
+        this.iconMaterial = null;
+    }
+    
+    public Landmark(String name, Location location, String description, int menuRow, int menuColumn, Material iconMaterial) {
+        this.name = name;
+        this.location = location;
+        this.description = description;
+        this.menuRow = menuRow;
+        this.menuColumn = menuColumn;
+        this.iconMaterial = iconMaterial;
     }
 
     public String getName() {
@@ -75,5 +88,13 @@ public class Landmark {
 
     public void setMenuColumn(int menuColumn) {
         this.menuColumn = menuColumn;
+    }
+
+    public Material getIconMaterial() {
+        return iconMaterial;
+    }
+
+    public void setIconMaterial(Material iconMaterial) {
+        this.iconMaterial = iconMaterial;
     }
 }
