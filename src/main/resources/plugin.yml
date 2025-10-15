@@ -1,7 +1,7 @@
 name: LandmarkSystem
 version: '${project.version}'
 main: ict.minesunshineone.landmark.LandmarkPlugin
-api-version: '1.20'
+api-version: '1.21'
 description: '一个功能强大的锚点传送系统'
 author: MineSunshineone
 folia-supported: true
@@ -35,7 +35,7 @@ permissions:
     description: 允许打开锚点菜单
     default: true
   landmark.interact:
-    description: 允许与锚点展示实体交互
+    description: 允许在锚点范围内交互打开菜单
     default: true
   landmark.admin:
     description: 管理员权限

@@ -279,26 +279,43 @@ public class PlayerListener implements Listener {
         lastCheckTimes.clear();
     }
 
-    @EventHandler(priority = EventPriority.LOWEST)
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerInteract(PlayerInteractEvent event) {
         Action action = event.getAction();
         Player player = event.getPlayer();
 
-        // 检查是否是左键动作，并且点击的是空气（不要问为什么不右键，因为右键的事件好像有问题）
-        if (action == Action.LEFT_CLICK_AIR) {
+        // 检查是否是右键空气或左键空气
+        if (action == Action.RIGHT_CLICK_AIR || action == Action.LEFT_CLICK_AIR) {
             // 检查权限
             if (!player.hasPermission("landmark.menu")) {
                 return;
             }
 
-            // 检查玩家是否在任意锚点范围内
-            for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
-                if (plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
-                    // 在锚点范围内,打开菜单
-                    plugin.getServer().getRegionScheduler().execute(plugin, player.getLocation(), () -> {
-                        new LandmarkMenu(plugin, player).open();
-                    });
-                    return;
+            // 检查玩家手上是否为空（避免与使用物品冲突）
+            if (action == Action.RIGHT_CLICK_AIR && player.getInventory().getItemInMainHand().getType().isAir() 
+                && player.getInventory().getItemInOffHand().getType().isAir()) {
+                
+                // 检查玩家是否在任意锚点范围内
+                for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
+                    if (plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
+                        // 在锚点范围内,打开菜单
+                        event.setCancelled(true); // 取消事件以防止其他交互
+                        plugin.getServer().getRegionScheduler().execute(plugin, player.getLocation(), () -> {
+                            new LandmarkMenu(plugin, player).open();
+                        });
+                        return;
+                    }
+                }
+            } else if (action == Action.LEFT_CLICK_AIR) {
+                // 左键空气也可以打开（作为备用）
+                for (Landmark landmark : plugin.getLandmarkManager().getLandmarks().values()) {
+                    if (plugin.getLandmarkManager().isPlayerNearLandmark(player, landmark.getLocation())) {
+                        // 在锚点范围内,打开菜单
+                        plugin.getServer().getRegionScheduler().execute(plugin, player.getLocation(), () -> {
+                            new LandmarkMenu(plugin, player).open();
+                        });
+                        return;
+                    }
                 }
             }
         }

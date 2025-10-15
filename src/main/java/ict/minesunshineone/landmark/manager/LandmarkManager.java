@@ -101,7 +101,7 @@ public class LandmarkManager {
 
             normalizeMenuPositions();
 
-            plugin.getSLF4JLogger().info("成功创建锚点展示实体: {} (图标: {})", name, randomIcon.name());
+            plugin.getSLF4JLogger().info("成功创建锚点: {} (菜单图标: {})", name, randomIcon.name());
             saveData();
         } catch (IllegalArgumentException | IllegalStateException e) {
             plugin.getSLF4JLogger().error("创建锚点时发生错误: {}", e.getMessage());
